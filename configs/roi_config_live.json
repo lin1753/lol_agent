@@ -1,0 +1,34 @@
+{
+  "resolution": [1920, 1080],
+  "note": "Live LOL game layout (standard 1920x1080)",
+  "regions": {
+    "minimap": {
+      "x": 0,
+      "y": 780,
+      "w": 300,
+      "h": 300,
+      "description": "Minimap bottom-left (blue side) or bottom-right (red side)"
+    },
+    "topbar": {
+      "x": 750,
+      "y": 0,
+      "w": 400,
+      "h": 50,
+      "description": "Game timer + kill score at top center"
+    },
+    "center": {
+      "x": 200,
+      "y": 100,
+      "w": 1500,
+      "h": 650,
+      "description": "Center viewport"
+    },
+    "hud": {
+      "x": 400,
+      "y": 850,
+      "w": 800,
+      "h": 230,
+      "description": "Bottom HUD (skills, items, stats)"
+    }
+  }
+}

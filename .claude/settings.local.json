@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__create_directory",
+      "mcp__filesystem__write_file",
+      "Bash(conda env *)",
+      "Bash(D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe *)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -c \"import torch; print\\(f'CUDA: {torch.cuda.is_available\\(\\)}'\\); print\\(f'Device: {torch.cuda.get_device_name\\(0\\)}' if torch.cuda.is_available\\(\\) else 'No GPU'\\)\")",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -c \"import pydantic, cv2, mss, numpy, torch, ultralytics; print\\(f'torch {torch.__version__}'\\); print\\(f'pydantic {pydantic.__version__}'\\); print\\(f'opencv {cv2.__version__}'\\); print\\(f'numpy {numpy.__version__}'\\); print\\(f'ultralytics {ultralytics.__version__}'\\)\")",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" \"D:\\\\Project\\\\lol_agent\\\\scripts\\\\analyze_data.py\")",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install pytest -q 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -c \"import paddle; print\\(paddle.__version__\\); print\\(paddle.device.get_device\\(\\)\\)\" 2>&1)",
+      "PowerShell(cd \"D:\\\\Project\\\\lol_agent\"; $env:FLAGS_use_cuda_managed_memory=\"false\"; & \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_ocr.py -v --timeout=120 2>&1)",
+      "PowerShell(cd \"D:\\\\Project\\\\lol_agent\"; $env:FLAGS_use_cuda_managed_memory=\"false\"; & \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_ocr.py::TestOcrEngine::test_init -v -s 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -c \"import paddle; print\\('paddle:', paddle.__version__\\); import paddleocr; print\\('paddleocr:', paddleocr.__version__\\)\" 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install \"paddleocr>=2.6,<3.0\" --force-reinstall --no-deps 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install scikit-image -q 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install albucore albumentations beautifulsoup4 cython \"fire>=0.3.0\" lmdb python-docx rapidfuzz -q 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install \"albumentations==1.3.1\" --force-reinstall -q 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install nvidia-cudnn-cu12==8.9.7.29 -q 2>&1)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pip install edge-tts pygame -q 2>&1)",
+      "Bash(\"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_minimap_parser.py -v --tb=short)",
+      "Bash(\"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_minimap_parser.py tests/test_main.py -v --tb=short)",
+      "PowerShell(& \"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" \"C:\\\\Users\\\\25109\\\\AppData\\\\Local\\\\Temp\\\\lol_ocr_worker.py\" ch 1 2>$null)",
+      "Bash('D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe' -c ' *)",
+      "Bash(\"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" scripts/build_center_dataset.py)",
+      "Bash(\"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_main.py tests/test_state_parser.py -v --tb=short)",
+      "Bash(\"D:\\\\Tools\\\\Anaconda_envs\\\\envs\\\\lol_agent\\\\python.exe\" -m pytest tests/test_overlay.py tests/test_main.py -v --tb=short)"
+    ]
+  }
+}

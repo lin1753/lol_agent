@@ -1,0 +1,38 @@
+[project]
+name = "lol-agent"
+version = "0.1.0"
+description = "Real-time LOL game understanding Agent Assistant"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "ultralytics",
+    "opencv-python",
+    "numpy",
+    "pandas",
+    "mss",
+    "pydantic>=2.0",
+    "pyqt5",
+    "pyttsx3",
+    "paddleocr",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pytest",
+    "ruff",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

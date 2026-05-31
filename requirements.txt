@@ -1,0 +1,13 @@
+torch
+torchvision
+torchaudio
+ultralytics
+opencv-python
+numpy
+pandas
+mss
+pydantic
+pyqt5
+pyttsx3
+paddleocr
+tqdm

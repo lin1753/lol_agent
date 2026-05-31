@@ -1,0 +1,87 @@
+"""Screen capture module using mss for real-time LOL window capture."""
+
+from __future__ import annotations
+
+import ctypes
+from typing import Optional
+
+import cv2
+import mss
+import numpy as np
+from numpy.typing import NDArray
+
+
+class ScreenCapture:
+    """Capture the LOL game window or a fixed screen region.
+
+    Args:
+        monitor: Monitor index (1-based) or dict with top/left/width/height.
+                 Defaults to primary monitor (1).
+    """
+
+    def __init__(self, monitor: int | dict = 1) -> None:
+        self._sct = mss.MSS()
+        if isinstance(monitor, int):
+            self._monitor = self._sct.monitors[monitor]
+        else:
+            self._monitor = monitor
+
+    def get_frame(self) -> NDArray[np.uint8]:
+        """Capture a single frame as a BGR numpy array (OpenCV format)."""
+        raw = self._sct.grab(self._monitor)
+        frame = np.array(raw)  # BGRA
+        return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+
+    def get_frame_raw(self) -> NDArray[np.uint8]:
+        """Capture a single frame as BGRA numpy array (no conversion)."""
+        raw = self._sct.grab(self._monitor)
+        return np.array(raw)
+
+    def set_window_region(
+        self, x: int, y: int, width: int, height: int
+    ) -> None:
+        """Manually set the capture region."""
+        self._monitor = {
+            "top": y,
+            "left": x,
+            "width": width,
+            "height": height,
+        }
+
+    def set_lol_window(self) -> bool:
+        """Auto-detect and set capture region to the LOL window.
+
+        Returns True if the LOL window was found.
+        """
+        try:
+            hwnd = ctypes.windll.user32.FindWindowW(None, "League of Legends")
+            if hwnd == 0:
+                return False
+            rect = ctypes.wintypes.RECT()
+            ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            self._monitor = {
+                "top": rect.top,
+                "left": rect.left,
+                "width": rect.right - rect.left,
+                "height": rect.bottom - rect.top,
+            }
+            return True
+        except (AttributeError, OSError):
+            return False
+
+    @property
+    def width(self) -> int:
+        return self._monitor["width"]
+
+    @property
+    def height(self) -> int:
+        return self._monitor["height"]
+
+    def close(self) -> None:
+        self._sct.close()
+
+    def __enter__(self) -> ScreenCapture:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()

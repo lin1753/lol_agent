@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# Data (too large for git)
+data/center_29_dataset/images/
+data/center_29_dataset/labels/
+data/center_29_dataset/dataset.yaml
+data/center_dataset/
+data/yolo_dataset/
+data/debug_*
+runs/
+*.pt
+
+# OMC/Claude session state
+.omc/
+
+# Temp files
+*.log
+*.tmp
+runs/
+*.pt
