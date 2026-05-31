@@ -109,9 +109,9 @@ class GameState(BaseModel):
         default="early_game",
         description="early_game (0-14min), mid_game (14-25min), late_game (25min+)",
     )
-    context: str = Field(
+    activity: str = Field(
         default="laning",
-        description="laning, split_push, skirmish, teamfight, dragon_fight, baron_fight",
+        description="laning, roaming, skirmish, teamfight, objective",
     )
     combat_state: str = Field(
         default="even",

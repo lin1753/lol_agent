@@ -148,11 +148,9 @@ class RuleEngine:
 
     def _rule_ambush_risk(self, state, memory):
         """Enemy split push + many missing = ambush risk."""
-        if state.context == "split_push":
-            missing = memory.get_enemy_missing()
-            if len(missing) >= 2:
-                return Warning(level=WarningLevel.DANGER, rule_name="ambush_risk",
-                    message="你正在带线且敌方多人消失，小心被包夹！",
+        if state.activity == "roaming" and state.threat_level in ("medium", "high"):
+            return Warning(level=WarningLevel.WARN, rule_name="ambush_risk",
+                message="你正在游走且敌方多人消失，小心被包夹！",
                     category=RuleCategory.THREAT, timestamp=state.current_time)
         return None
 
@@ -178,14 +176,14 @@ class RuleEngine:
         return None
 
     def _rule_dragon_fight_proximity(self, state, memory):
-        if state.context == "dragon_fight":
+        if state.activity == "objective" and state.dragon.alive:
             return Warning(level=WarningLevel.WARN, rule_name="dragon_fight_proximity",
-                message="小龙团正在发生，注意团战位置",
+                message="正在争夺小龙，注意团战位置",
                 category=RuleCategory.OBJECTIVE, timestamp=state.current_time)
         return None
 
     def _rule_baron_fight_proximity(self, state, memory):
-        if state.context == "baron_fight":
+        if state.activity == "objective":
             return Warning(level=WarningLevel.WARN, rule_name="baron_fight_proximity",
                 message="男爵团正在发生，注意团战位置",
                 category=RuleCategory.OBJECTIVE, timestamp=state.current_time)
@@ -229,7 +227,7 @@ class RuleEngine:
         return suggestions
 
     def _sug_laning_advantage(self, state, memory):
-        if (state.context in ("laning", "skirmish")
+        if (state.activity in ("laning", "skirmish")
                 and state.combat_state == "advantage"):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_lane_adv",
                 message="对线优势，建议积极换血",
@@ -238,7 +236,7 @@ class RuleEngine:
         return None
 
     def _sug_laning_disadvantage(self, state, memory):
-        if (state.context in ("laning", "skirmish")
+        if (state.activity in ("laning", "skirmish")
                 and state.combat_state == "disadvantage"):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_lane_disadv",
                 message="对线劣势，建议稳健补刀",
@@ -247,7 +245,7 @@ class RuleEngine:
         return None
 
     def _sug_dragon_advantage(self, state, memory):
-        if (state.context == "dragon_fight"
+        if (state.activity == "objective"
                 and state.combat_state == "advantage"):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_dragon_adv",
                 message="我方优势，建议争夺小龙",
@@ -256,7 +254,7 @@ class RuleEngine:
         return None
 
     def _sug_dragon_disadvantage(self, state, memory):
-        if (state.context == "dragon_fight"
+        if (state.activity == "objective"
                 and state.combat_state == "disadvantage"):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_dragon_disadv",
                 message="我方劣势，建议放龙换资源",
@@ -265,7 +263,7 @@ class RuleEngine:
         return None
 
     def _sug_retreat_split_push(self, state, memory):
-        if (state.context == "split_push"
+        if (state.activity == "roaming"
                 and state.threat_level in ("medium", "high")):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_retreat_sp",
                 message="带线风险高，建议后撤",
@@ -306,7 +304,7 @@ class RuleEngine:
         return None
 
     def _sug_teamfight_advantage(self, state, memory):
-        if (state.context == "teamfight"
+        if (state.activity == "teamfight"
                 and state.combat_state == "advantage"):
             return Warning(level=WarningLevel.SUGGEST, rule_name="sug_tf_adv",
                 message="团战我方优势，可以主动开团",

@@ -35,35 +35,43 @@ def compute_game_phase(current_time: float) -> str:
         return "late_game"
 
 
-def compute_context(
+def compute_activity(
     state: GameState,
     memory: TemporalMemory,
 ) -> str:
-    """Determine the current game context/situation."""
-    total_visible = state.enemy_count_visible + state.ally_count_visible
+    """Determine the current activity (independent of game phase).
+
+    Priority: teamfight > objective > skirmish > roaming > laning
+
+    Args:
+        state: Current game state.
+        memory: Temporal memory with hero tracking.
+
+    Returns:
+        Activity type string.
+    """
+    enemy_count = state.enemy_count_visible
+    ally_count = state.ally_count_visible + 1  # +1 for player
     missing = memory.get_enemy_missing()
-    missing_count = len(missing)
 
-    # Objective fights
-    if state.dragon.alive and state.teamfight_probability > 0.4:
-        # Check if heroes are near dragon area (minimap positions)
-        return "dragon_fight"
-    if state.baron.alive and state.teamfight_probability > 0.4:
-        return "baron_fight"
+    # Teamfight: both sides have 3+ visible and clustered
+    if enemy_count >= 3 and ally_count >= 3 and state.teamfight_probability >= 0.5:
+        return "teamfight"
 
-    # Teamfight (both sides 3+ visible and clustered)
-    if state.enemy_count_visible >= 3 and state.ally_count_visible >= 3:
-        if state.teamfight_probability >= 0.5:
-            return "teamfight"
+    # Objective: near dragon/baron with heroes present
+    if (state.dragon.alive or state.baron.alive) and state.teamfight_probability >= 0.3:
+        total_near = enemy_count + ally_count
+        if total_near >= 3:
+            return "objective"
 
-    # Skirmish (2-4 from each side)
-    if 2 <= state.enemy_count_visible <= 4 and 2 <= state.ally_count_visible <= 4:
+    # Skirmish: 2-4 from each side, moderate proximity
+    if 2 <= enemy_count <= 4 and 2 <= ally_count <= 4:
         return "skirmish"
 
-    # Split push (player alone, no nearby enemies)
-    if state.ally_count_visible <= 1 and state.enemy_count_visible <= 1:
-        if missing_count >= 2:
-            return "split_push"
+    # Roaming: player not in original lane, no nearby enemies
+    if enemy_count <= 1 and ally_count <= 1:
+        if len(missing) >= 2:
+            return "roaming"
 
     # Default: laning
     return "laning"
@@ -244,8 +252,8 @@ class StateEngine:
         # 1. Game Phase
         state.game_phase = compute_game_phase(state.current_time)
 
-        # 2. Context
-        state.context = compute_context(state, memory)
+        # 2. Activity
+        state.activity = compute_activity(state, memory)
 
         # 3. Combat
         state.combat_state, state.combat_score = compute_combat_state(state, memory)

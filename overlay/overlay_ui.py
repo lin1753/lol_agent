@@ -28,9 +28,9 @@ _ICONS = {
 }
 
 _PHASE_CN = {"early_game": "前期", "mid_game": "中期", "late_game": "后期"}
-_CONTEXT_CN = {
-    "laning": "对线", "split_push": "带线", "skirmish": "遭遇战",
-    "teamfight": "团战", "dragon_fight": "小龙团", "baron_fight": "男筠团",
+_ACTIVITY_CN = {
+    "laning": "对线", "roaming": "游走", "skirmish": "遭遇战",
+    "teamfight": "团战", "objective": "目标争夺",
 }
 _COMBAT_CN = {"advantage": "优势", "even": "均势", "disadvantage": "劣势"}
 _THREAT_CN = {"low": "低", "medium": "中", "high": "高"}
@@ -158,9 +158,9 @@ class OverlayWidget(QWidget):
             y += 24
 
         phase = _PHASE_CN.get(self._state_info.get("game_phase", ""), "?")
-        ctx = _CONTEXT_CN.get(self._state_info.get("context", ""), "?")
+        activity = _ACTIVITY_CN.get(self._state_info.get("activity", ""), "?")
         p.setPen(QColor(200, 200, 200))
-        p.drawText(12, y + 12, f"阶段: {phase}  场景: {ctx}")
+        p.drawText(12, y + 12, f"阶段: {phase}  活动: {activity}")
         y += 22
 
         combat = _COMBAT_CN.get(self._state_info.get("combat_state", ""), "?")

@@ -24,6 +24,7 @@ TOWER_CLASSES = {"blue_tower", "red_tower"}
 OBJECTIVE_CLASSES = {"baron", "herald", "void_grub", "dragon"}
 SKILL_CLASSES = {"q_skill", "w_skill", "e_skill", "r_skill", "d_skill", "f_skill"}
 MINIMAP_CLASSES = {"minimap", "minimap_fov"}
+# Not used for OCR (bbox too small): player_level
 
 
 @dataclass

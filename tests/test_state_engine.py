@@ -7,7 +7,7 @@ from models.game_state import GameState, HeroPosition, ObjectiveStatus, Team
 from reasoning.state_engine import (
     StateEngine,
     compute_game_phase,
-    compute_context,
+    compute_activity,
     compute_combat_state,
     compute_lane_state,
     compute_threat_level,
@@ -31,7 +31,7 @@ class TestPhaseEngine:
         assert compute_game_phase(3600) == "late_game"  # 60 min
 
 
-class TestContextEngine:
+class TestActivityEngine:
     def _hero(self, name, team, x=100, y=100, lane="mid"):
         return HeroPosition(name=name, team=team, x=x, y=y, lane=lane)
 
@@ -43,8 +43,8 @@ class TestContextEngine:
         )
         mem = TemporalMemory()
         mem.update(state)
-        ctx = compute_context(state, mem)
-        assert ctx == "laning"
+        act = compute_activity(state, mem)
+        assert act == "laning"
 
     def test_teamfight(self):
         state = GameState(
@@ -65,41 +65,37 @@ class TestContextEngine:
         )
         mem = TemporalMemory()
         mem.update(state)
-        ctx = compute_context(state, mem)
-        assert ctx == "teamfight"
+        act = compute_activity(state, mem)
+        assert act == "teamfight"
 
-    def test_dragon_fight(self):
+    def test_objective(self):
         state = GameState(
             current_time=600,
-            dragon_alive=True,
+            dragon=ObjectiveStatus(alive=True),
             teamfight_probability=0.6,
             visible_enemies=[self._hero("e1", Team.RED), self._hero("e2", Team.RED)],
             visible_allies=[self._hero("a1", Team.BLUE), self._hero("a2", Team.BLUE)],
         )
         mem = TemporalMemory()
         mem.update(state)
-        ctx = compute_context(state, mem)
-        assert ctx == "dragon_fight"
+        act = compute_activity(state, mem)
+        assert act == "objective"
 
-    def test_split_push(self):
+    def test_roaming(self):
         state = GameState(
             current_time=600,
             visible_enemies=[],
             visible_allies=[],
         )
         mem = TemporalMemory()
-        # Make 3 enemies missing
-        mem.update(GameState(
-            current_time=500,
-            visible_enemies=[
-                self._hero("e1", Team.RED),
-                self._hero("e2", Team.RED),
-                self._hero("e3", Team.RED),
-            ],
-        ))
+        for name in ["e1", "e2", "e3"]:
+            mem.update(GameState(
+                current_time=500,
+                visible_enemies=[HeroPosition(name=name, team=Team.RED, x=100, y=100)],
+            ))
         mem.update(GameState(current_time=600))
-        ctx = compute_context(state, mem)
-        assert ctx == "split_push"
+        act = compute_activity(state, mem)
+        assert act == "roaming"
 
 
 class TestCombatEngine:
@@ -198,7 +194,7 @@ class TestStateEngine:
         result = engine.understand(state, mem)
 
         assert result.game_phase == "mid_game"
-        assert result.context in ("laning", "split_push")
+        assert result.activity in ("laning", "roaming")
         assert result.combat_state in ("advantage", "even", "disadvantage")
         assert result.threat_level in ("low", "medium", "high")
         assert result.dragon_spawn_in >= 0

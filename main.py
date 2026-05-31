@@ -305,7 +305,7 @@ class LolAgent:
             f"[{state.current_time:.0f}s | {fps:.1f}FPS] "
             f"YOLO:{len(hero_dets)} mm:{mm_enemies}E/{mm_allies}A "
             f"vis:{state.enemy_count_visible}E/{state.ally_count_visible}A "
-            f"phase:{state.game_phase} ctx:{state.context} "
+            f"phase:{state.game_phase} act:{state.activity} "
             f"combat:{state.combat_state} threat:{state.threat_level}",
             end="",
         )
@@ -318,7 +318,7 @@ class LolAgent:
         """Convert GameState to dict for overlay display."""
         return {
             "game_phase": state.game_phase,
-            "context": state.context,
+            "activity": state.activity,
             "combat_state": state.combat_state,
             "threat_level": state.threat_level,
             "dragon_spawn_in": state.dragon_spawn_in,

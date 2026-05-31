@@ -74,7 +74,7 @@ class TestRuleEngine:
         engine = self._make_engine()
         state = GameState(current_time=600,
             combat_state="advantage", combat_score=0.5,
-            context="laning",
+            activity="laning",
             visible_enemies=[self._hero("e1", Team.RED)],
             visible_allies=[self._hero("a1", Team.BLUE), self._hero("a2", Team.BLUE)],
             player_hp=100)
@@ -88,7 +88,7 @@ class TestRuleEngine:
         engine = self._make_engine()
         state = GameState(current_time=600,
             combat_state="disadvantage", combat_score=-0.5,
-            context="laning", player_hp=100,
+            activity="laning", player_hp=100,
             visible_enemies=[self._hero("e1", Team.RED), self._hero("e2", Team.RED)],
             visible_allies=[self._hero("a1", Team.BLUE)])
         mem = TemporalMemory()
@@ -97,9 +97,9 @@ class TestRuleEngine:
         names = [w.rule_name for w in warnings]
         assert "sug_lane_disadv" in names
 
-    def test_retreat_split_push(self):
+    def test_retreat_roaming(self):
         engine = self._make_engine()
-        state = GameState(current_time=600, context="split_push",
+        state = GameState(current_time=600, activity="roaming",
             threat_level="medium")
         mem = TemporalMemory()
         mem.update(state)
@@ -157,7 +157,7 @@ class TestRuleEngine:
     def test_suggestion_flag(self):
         engine = self._make_engine()
         state = GameState(current_time=600, combat_state="advantage",
-            context="laning", player_hp=100,
+            activity="laning", player_hp=100,
             visible_enemies=[self._hero("e1", Team.RED)],
             visible_allies=[self._hero("a1", Team.BLUE), self._hero("a2", Team.BLUE)])
         mem = TemporalMemory()
