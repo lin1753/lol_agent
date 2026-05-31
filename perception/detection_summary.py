@@ -16,7 +16,7 @@ from perception.yolo_infer import Detection
 
 
 # Class name constants (must match training config)
-UI_CLASSES = {"game_time", "kda", "gold", "player_level", "player_hp_bar"}
+UI_CLASSES = {"game_time", "kda", "gold", "player_hp_bar"}
 HERO_CLASSES = {"green_hp_hero", "blue_hp_hero", "red_hp_hero"}
 HP_BAR_CLASSES = {"green_hp_bar", "blue_hp_bar", "red_hp_bar"}
 MINION_CLASSES = {"red_minion", "red_cannon", "blue_minion", "blue_cannon"}

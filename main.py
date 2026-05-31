@@ -169,6 +169,7 @@ class LolAgent:
         signal.signal(signal.SIGINT, signal_handler)
 
         frame_count = 0
+        frame_index = 0  # Video frame counter for game time calculation
         fps_timer = time.time()
         fps_display = 0.0
 
@@ -208,11 +209,23 @@ class LolAgent:
                 if minimap is not None:
                     minimap_dets = self._minimap.parse(minimap)
 
-                # 4. OCR — use YOLO-detected UI regions, cache results across frames
-                ocr_values = dict(self._cached_ocr)  # Start with cached values
-                if self._ocr and self._ocr._ready:
-                    ocr_crops = extract_ocr_regions(frame, det_summary, scale=3)
-                    if "game_time" in ocr_crops:
+                # 4. Game time + OCR (optimized)
+                ocr_values = dict(self._cached_ocr)
+
+                # Game time: compute from video frame index (no OCR needed)
+                if self._video_cap:
+                    video_fps = self._video_cap.get(cv2.CAP_PROP_FPS)
+                    if video_fps > 0:
+                        game_seconds = frame_index / video_fps
+                        ocr_values["time"] = f"{int(game_seconds // 60)}:{int(game_seconds % 60):02d}"
+                        self._cached_ocr["time"] = ocr_values["time"]
+                        frame_index += 1
+
+                # OCR: only gold + kda, every 60 frames (~2s at 30fps)
+                if self._ocr and self._ocr._ready and frame_count % 60 == 0:
+                    ocr_crops = extract_ocr_regions(frame, det_summary, scale=4)
+                    if "game_time" in ocr_crops and not self._video_cap:
+                        # Real-time mode: OCR game_time (not video)
                         t = self._ocr.recognize_time(ocr_crops["game_time"])
                         if t:
                             ocr_values["time"] = t
@@ -225,14 +238,9 @@ class LolAgent:
                             self._cached_ocr["kda"] = kda_str
                     if "gold" in ocr_crops:
                         g = self._ocr.recognize_number(ocr_crops["gold"])
-                        if g is not None:
+                        if g is not None and g > 0:
                             ocr_values["gold"] = str(int(g))
                             self._cached_ocr["gold"] = str(int(g))
-                    if "player_level" in ocr_crops:
-                        lv = self._ocr.recognize_number(ocr_crops["player_level"])
-                        if lv is not None:
-                            ocr_values["level"] = str(int(lv))
-                            self._cached_ocr["level"] = str(int(lv))
 
                 # 5. Parse state
                 state = self._state_parser.parse_with_minimap(
