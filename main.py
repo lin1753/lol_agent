@@ -246,6 +246,7 @@ class LolAgent:
                 state = self._state_parser.parse_with_minimap(
                     hero_dets, minimap_dets, ocr_values,
                     frame_shape=frame.shape[:2],
+                    det_summary=det_summary,
                 )
 
                 # 6. Update temporal memory

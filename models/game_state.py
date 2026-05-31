@@ -98,7 +98,11 @@ class GameState(BaseModel):
     blue_towers_alive: int = Field(default=11, ge=0, le=11)
     red_towers_alive: int = Field(default=11, ge=0, le=11)
 
-    # --- Minions (from YOLO 29-class) ---
+    # --- HP Bar data (from YOLO, for combat calculation) ---
+    ally_hp_bar_count: int = Field(default=0, ge=0)
+    enemy_hp_bar_count: int = Field(default=0, ge=0)
+    ally_hp_bar_total_width: int = Field(default=0, ge=0, description="Sum of ally HP bar widths (proxy for total HP)")
+    enemy_hp_bar_total_width: int = Field(default=0, ge=0, description="Sum of enemy HP bar widths (proxy for total HP)")
     red_minion_count: int = Field(default=0, ge=0)
     blue_minion_count: int = Field(default=0, ge=0)
     red_cannon_count: int = Field(default=0, ge=0)

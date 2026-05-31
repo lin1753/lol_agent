@@ -103,27 +103,54 @@ class TestCombatEngine:
         state = GameState(
             visible_enemies=[],
             visible_allies=[],
-            player_hp=100,
         )
         mem = TemporalMemory()
         mem.update(state)
         cs, score = compute_combat_state(state, mem)
         assert cs == "even"
 
-    def test_advantage(self):
+    def test_advantage_more_ally_heroes(self):
         state = GameState(
             visible_enemies=[HeroPosition(name="e1", team=Team.RED, x=100, y=100)],
             visible_allies=[
                 HeroPosition(name="a1", team=Team.BLUE, x=100, y=100),
                 HeroPosition(name="a2", team=Team.BLUE, x=200, y=200),
             ],
-            player_hp=100,
+        )
+        mem = TemporalMemory()
+        mem.update(state)
+        cs, score = compute_combat_state(state, mem)
+        # 3 allies vs 2 enemies → slight advantage even without HP bar data
+        assert cs in ("advantage", "even")
+        assert score > 0
+
+    def test_hp_bar_advantage(self):
+        """More ally HP bars with larger area = advantage."""
+        state = GameState(
+            ally_hp_bar_count=2,
+            enemy_hp_bar_count=1,
+            ally_hp_bar_total_width=2000,
+            enemy_hp_bar_total_width=800,
         )
         mem = TemporalMemory()
         mem.update(state)
         cs, score = compute_combat_state(state, mem)
         assert cs == "advantage"
-        assert score > 0
+        assert score > 0.2
+
+    def test_hp_bar_disadvantage(self):
+        """Fewer ally HP bars = disadvantage."""
+        state = GameState(
+            ally_hp_bar_count=1,
+            enemy_hp_bar_count=3,
+            ally_hp_bar_total_width=500,
+            enemy_hp_bar_total_width=3000,
+        )
+        mem = TemporalMemory()
+        mem.update(state)
+        cs, score = compute_combat_state(state, mem)
+        assert cs == "disadvantage"
+        assert score < -0.3
 
 
 class TestLaneEngine:

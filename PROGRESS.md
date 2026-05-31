@@ -30,6 +30,7 @@
 | 23 | OCR 子进程修复 + 预处理优化 | ✅ 完成 | PASS | 2026-05-31 |
 | 24 | Overlay 加入实时游戏时间 | ✅ 完成 | PASS | 2026-05-31 |
 | 25 | OCR 优化（帧序号计时+限频） | ✅ 完成 | PASS | 2026-05-31 |
+| 26 | 优化 v2（等级屏蔽+资源修复+二维状态） | ✅ 完成 | PASS | 2026-05-31 |
 
 ---
 
@@ -355,3 +356,4 @@ Overlay 状态面板 + Voice
 - **Overlay 加入实时游戏时间**: 面板顶部大字显示 `⏱ MM:SS`
 - **OCR 优化**: game_time 从帧序号计算（精确无延迟），player_level 不识别（bbox 太小），gold/kda 每 2 秒 OCR 一次
 - **已推送 GitHub**: https://github.com/lin1753/lol_agent
+- **优化 v2**: 禁用 player_level OCR；中立资源仅追踪小龙+男筠；context 拆分为 game_phase × activity 二维模型（laning/roaming/skirmish/teamfight/objective）

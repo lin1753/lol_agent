@@ -81,43 +81,47 @@ def compute_combat_state(
     state: GameState,
     memory: TemporalMemory,
 ) -> tuple[str, float]:
-    """Evaluate combat advantage based on count, levels, HP.
+    """Evaluate combat advantage based on HP bars, hero count, and missing enemies.
 
     Returns (combat_state, combat_score).
     """
     score = 0.0
 
-    # Factor 1: Numbers advantage (weight: 0.4)
+    # Factor 1: HP bar ratio (weight: 0.5) — most reliable indicator
+    if state.ally_hp_bar_total_width > 0 and state.enemy_hp_bar_total_width > 0:
+        ally_hp = state.ally_hp_bar_total_width
+        enemy_hp = state.enemy_hp_bar_total_width
+        total = ally_hp + enemy_hp
+        if total > 0:
+            # Positive = ally advantage, Negative = enemy advantage
+            hp_ratio = (ally_hp - enemy_hp) / total  # range: -1 to +1
+            score += 0.5 * hp_ratio
+    elif state.ally_hp_bar_count > state.enemy_hp_bar_count:
+        score += 0.2  # More ally heroes visible
+    elif state.enemy_hp_bar_count > state.ally_hp_bar_count:
+        score -= 0.2
+
+    # Factor 2: Numbers advantage (weight: 0.3)
     ally_count = state.ally_count_visible + 1  # +1 for player
     enemy_count = state.enemy_count_visible + 1
     if ally_count > enemy_count:
-        score += 0.4 * min((ally_count - enemy_count) / 3, 1.0)
+        score += 0.3 * min((ally_count - enemy_count) / 3, 1.0)
     elif enemy_count > ally_count:
-        score -= 0.4 * min((enemy_count - ally_count) / 3, 1.0)
+        score -= 0.3 * min((enemy_count - ally_count) / 3, 1.0)
 
-    # Factor 2: HP advantage (weight: 0.3)
-    if state.player_hp > 0:
-        hp_ratio = state.player_hp / 100
-        if hp_ratio > 0.7:
-            score += 0.3 * (hp_ratio - 0.5)
-        elif hp_ratio < 0.3:
-            score -= 0.3 * (0.5 - hp_ratio)
-
-    # Factor 3: Missing enemies reduce safety (weight: 0.3)
+    # Factor 3: Missing enemies reduce safety (weight: 0.2)
     missing = memory.get_enemy_missing()
     if len(missing) >= 3:
-        score -= 0.3
+        score -= 0.2
     elif len(missing) >= 2:
-        score -= 0.15
-    elif len(missing) == 0 and state.enemy_count_visible >= 2:
-        score += 0.1  # Visible enemies are less threatening than unknown
+        score -= 0.1
 
     # Clamp
     score = max(-1.0, min(1.0, score))
 
-    if score > 0.2:
+    if score > 0.15:
         return "advantage", score
-    elif score < -0.2:
+    elif score < -0.15:
         return "disadvantage", score
     else:
         return "even", score

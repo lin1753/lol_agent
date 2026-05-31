@@ -213,6 +213,7 @@ class StateParser:
         minimap_detections: List[MinimapDetection],
         ocr_results: Dict[str, str],
         frame_shape: tuple[int, int] = (1080, 1920),
+        det_summary=None,
     ) -> GameState:
         """Parse with minimap_parser (OpenCV) instead of YOLO minimap detections.
 
@@ -268,6 +269,17 @@ class StateParser:
         all_heroes = visible_enemies + visible_allies
         teamfight_prob = _count_teamfight_probability(all_heroes)
 
+        # Extract HP bar data from DetectionSummary
+        ally_bar_count = 0
+        enemy_bar_count = 0
+        ally_bar_width = 0
+        enemy_bar_width = 0
+        if det_summary:
+            ally_bar_count = len(det_summary.ally_hp_bars)
+            enemy_bar_count = len(det_summary.enemy_hp_bars)
+            ally_bar_width = sum(d.area for d in det_summary.ally_hp_bars)
+            enemy_bar_width = sum(d.area for d in det_summary.enemy_hp_bars)
+
         state = GameState(
             current_time=current_time,
             visible_enemies=visible_enemies,
@@ -281,6 +293,10 @@ class StateParser:
             assists=assists,
             danger_lane=danger_lane,
             teamfight_probability=teamfight_prob,
+            ally_hp_bar_count=ally_bar_count,
+            enemy_hp_bar_count=enemy_bar_count,
+            ally_hp_bar_total_width=ally_bar_width,
+            enemy_hp_bar_total_width=enemy_bar_width,
         )
 
         return state
