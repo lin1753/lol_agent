@@ -62,6 +62,7 @@ class LolAgent:
         monitor: int | str = "auto",
         fps_target: float = 5.0,
         v2: bool = False,
+        enable_llm: bool = False,
     ) -> None:
         self._use_gpu = use_gpu
         self._enable_overlay = enable_overlay
@@ -149,8 +150,27 @@ class LolAgent:
             self._decision_engine_v2 = DecisionEngineV2()
             print("  V2: FeatureEngine + ContextEngine + GoalEngine + DecisionEngineV2")
 
+        # LLM Engine (V2 + --llm)
+        self._llm_engine = None
+        if v2 and enable_llm:
+            from reasoning.llm_engine import LlmEngine
+            self._llm_engine = LlmEngine()
+            if not self._llm_engine.start():
+                self._llm_engine = None
+                print("  LLM: disabled (failed to load)")
+
         # Temporal Memory
         self._memory = TemporalMemory(window_size=30)
+
+        # Memory V2 (V2 mode)
+        self._hero_memory_v2 = None
+        self._objective_memory = None
+        if v2:
+            from memory.hero_memory import HeroMemoryV2
+            from memory.objective_memory import ObjectiveMemory
+            self._hero_memory_v2 = HeroMemoryV2()
+            self._objective_memory = ObjectiveMemory()
+            print("  V2: MemoryV2 (HeroMemory + ObjectiveMemory)")
 
         # Rule Engine
         self._rules = RuleEngine()
@@ -274,12 +294,26 @@ class LolAgent:
                     # Parse game time for state
                     game_time = StateParser._parse_time(ocr_values.get("time", ""))
 
+                    # Update Memory V2
+                    if self._hero_memory_v2:
+                        self._hero_memory_v2.update(minimap_dets, game_time)
+                    if self._objective_memory:
+                        for obj_name, alive in bundle.objective.model_dump().items():
+                            obj_key = obj_name.replace("_alive", "")
+                            if alive:
+                                self._objective_memory.record_spawn(obj_key)
+
                     # Build GameStateV2 from features + context
                     from schemas.state import GameStateV2
                     v2_state = GameStateV2(game_time=game_time)
                     v2_state.context = self._context_engine.compute(bundle, v2_state, self._memory)
                     goal = self._goal_engine.determine(v2_state, bundle, self._memory)
                     decisions = self._decision_engine_v2.evaluate(v2_state, goal, bundle, self._memory)
+
+                    # LLM advice (throttled)
+                    advice = None
+                    if self._llm_engine and self._llm_engine.should_advise(v2_state, goal):
+                        advice = self._llm_engine.advise(v2_state, goal, decisions)
 
                     frame_count += 1
                     elapsed = time.time() - fps_timer
@@ -293,6 +327,8 @@ class LolAgent:
                         if decisions:
                             top = decisions[0]
                             print(f"  Goal: {goal.goal_type} ({goal.confidence:.0%}) → {top.action} ({top.score:.0f}) {top.reason}")
+                        if advice:
+                            print(f"  LLM: {advice}")
 
                     if self._overlay:
                         self._overlay.update_state(self._make_v2_state_info(bundle, goal=goal, context=v2_state.context))
@@ -439,6 +475,8 @@ class LolAgent:
     def _shutdown(self) -> None:
         """Clean shutdown of all modules."""
         print("\nShutting down modules...")
+        if self._llm_engine:
+            self._llm_engine.stop()
         if self._ocr:
             self._ocr.stop()
         if self._tts:
@@ -462,6 +500,7 @@ def main() -> None:
     parser.add_argument("--fps", type=float, default=5.0, help="Target FPS")
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
     parser.add_argument("--v2", action="store_true", help="Use V2 pipeline (FeatureEngine)")
+    parser.add_argument("--llm", action="store_true", help="Enable Qwen3-8B LLM advice (requires --v2)")
     args = parser.parse_args()
 
     agent = LolAgent(
@@ -473,6 +512,7 @@ def main() -> None:
         monitor=args.monitor,
         fps_target=args.fps,
         v2=args.v2,
+        enable_llm=args.llm,
     )
     agent.run()
 

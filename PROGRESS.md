@@ -34,8 +34,8 @@
 | 27 | 优化 v3（HP 血量对比 combat 计算） | ✅ 完成 | PASS | 2026-05-31 |
 | 28 | V2.0 重构：P1 Schema + Feature Engine | ✅ 完成 | PASS | 2026-06-01 |
 | 29 | V2.0 重构：P2 Goal + Decision Engine | ✅ 完成 | PASS | 2026-06-01 |
-| 30 | V2.0 重构：P3 Qwen3-8B 推理层 | 待开始 | - | |
-| 31 | V2.0 重构：P4 Memory V2 | 待开始 | - | |
+| 30 | V2.0 重构：P3 Qwen3-8B 推理层 | ✅ 完成 | PASS | 2026-06-01 |
+| 31 | V2.0 重构：P4 Memory V2 | ✅ 完成 | PASS | 2026-06-01 |
 | 32 | YOLO 模型更新（31类） | 待开始 | - | |
 
 ---
@@ -479,3 +479,64 @@ Screen → YOLO → DetectionSummary → FeatureEngine → FeatureBundle
 ### 测试报告
 - **35/35 通过**（P2 新增：10 context + 12 goal + 13 decision）
 - **全量回归**: 216/216 通过（V1 零影响）
+
+---
+
+## V2.0 P3：Qwen3-8B LLM 推理层（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `reasoning/llm_engine.py` — LlmEngine 类（transformers + 4bit 量化，限频触发）
+  - `start()` — 加载 Qwen3-8B 模型（4bit 量化 ~5GB VRAM）
+  - `advise()` — 结构化输入 → 中文自然语言建议
+  - `should_advise()` — 限频：Goal 变化或每 10 秒触发一次
+  - `_build_prompt()` — 构造 system + user prompt（JSON 结构化输入）
+- `tests/test_llm_engine.py` — 8 个测试用例（Mock LLM，不加载实际模型）
+
+### 用法
+```bash
+python main.py --v2 --llm --model path/to/best.pt --video path/to/video.mp4
+```
+
+### 测试报告
+- **8/8 通过**（prompt 构造、限频逻辑、状态重置、JSON 结构验证）
+- **全量回归**: 244/244 通过
+
+---
+
+## V2.0 P4：Memory V2（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `memory/hero_memory.py` — HeroMemoryV2（基于 MinimapDetection 的英雄追踪、proximity matching、缺失时长）
+- `memory/objective_memory.py` — ObjectiveMemory（龙/男爵/先锋/巢虫 计时记录、击杀/刷新追踪）
+- `memory/fight_memory.py` — FightMemory（团战/死亡记录、胜率计算）
+- `memory/memory_v2.py` — 统一导出包
+- `tests/test_memory_v2.py` — 20 个测试用例
+
+### 测试报告
+- **20/20 通过**（7 hero + 6 objective + 7 fight）
+- **全量回归**: 244/244 通过
+
+---
+
+## V2.0 最终完整调用链
+
+```
+Screen → YOLO → DetectionSummary → FeatureEngine → FeatureBundle
+    → HeroMemoryV2 (minimap tracking)
+    → ObjectiveMemory (objective timers)
+    → ContextEngine → context (7 types)
+    → GoalEngine → Goal (9 types + confidence)
+    → DecisionEngineV2 → list[Decision] (scored + sorted)
+    → LlmEngine (throttled) → 中文建议
+    → Console + Overlay + TTS
+```
+
+### V2 启动命令
+```bash
+python main.py --v2 --model path/to/best.pt --video path/to/video.mp4
+python main.py --v2 --llm --model path/to/best.pt  # 带 LLM 建议
+```
