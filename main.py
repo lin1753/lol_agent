@@ -135,10 +135,19 @@ class LolAgent:
 
         # Feature Engine (V2)
         self._feature_engine = None
+        self._context_engine = None
+        self._goal_engine = None
+        self._decision_engine_v2 = None
         if v2:
             from reasoning.feature_engine import FeatureEngine
+            from reasoning.context_engine import ContextEngine
+            from reasoning.goal_engine import GoalEngine
+            from reasoning.decision_engine_v2 import DecisionEngineV2
             self._feature_engine = FeatureEngine()
-            print("  V2: FeatureEngine enabled")
+            self._context_engine = ContextEngine()
+            self._goal_engine = GoalEngine()
+            self._decision_engine_v2 = DecisionEngineV2()
+            print("  V2: FeatureEngine + ContextEngine + GoalEngine + DecisionEngineV2")
 
         # Temporal Memory
         self._memory = TemporalMemory(window_size=30)
@@ -255,12 +264,23 @@ class LolAgent:
                             ocr_values["gold"] = str(int(g))
                             self._cached_ocr["gold"] = str(int(g))
 
-                # 5. V2 pipeline: FeatureEngine → FeatureBundle
+                # 5. V2 pipeline: FeatureEngine → Context → Goal → Decision
                 if self._v2 and self._feature_engine:
                     bundle = self._feature_engine.extract(
                         det_summary, ocr_values, minimap_dets,
                         minimap_shape=minimap.shape[:2] if minimap is not None else (240, 240),
                     )
+
+                    # Parse game time for state
+                    game_time = StateParser._parse_time(ocr_values.get("time", ""))
+
+                    # Build GameStateV2 from features + context
+                    from schemas.state import GameStateV2
+                    v2_state = GameStateV2(game_time=game_time)
+                    v2_state.context = self._context_engine.compute(bundle, v2_state, self._memory)
+                    goal = self._goal_engine.determine(v2_state, bundle, self._memory)
+                    decisions = self._decision_engine_v2.evaluate(v2_state, goal, bundle, self._memory)
+
                     frame_count += 1
                     elapsed = time.time() - fps_timer
                     if elapsed >= 1.0:
@@ -270,9 +290,12 @@ class LolAgent:
 
                     if frame_count % 30 == 0:
                         self._display_v2_status(bundle, hero_dets, minimap_dets, fps_display)
+                        if decisions:
+                            top = decisions[0]
+                            print(f"  Goal: {goal.goal_type} ({goal.confidence:.0%}) → {top.action} ({top.score:.0f}) {top.reason}")
 
                     if self._overlay:
-                        self._overlay.update_state(self._make_v2_state_info(bundle))
+                        self._overlay.update_state(self._make_v2_state_info(bundle, goal=goal, context=v2_state.context))
 
                 # 5b. V1 pipeline: StateParser → GameState
                 else:
@@ -385,11 +408,13 @@ class LolAgent:
         )
 
     @staticmethod
-    def _make_v2_state_info(bundle) -> dict:
-        """Convert FeatureBundle to dict for overlay display."""
+    def _make_v2_state_info(bundle, goal=None, context="safe_farm") -> dict:
+        """Convert FeatureBundle + Goal to dict for overlay display."""
+        goal_type = goal.goal_type if goal else "reset"
+        goal_conf = goal.confidence if goal else 0.0
         return {
-            "game_phase": "V2",
-            "activity": f"hero:{bundle.hero.ally_count}A/{bundle.hero.enemy_count}E",
+            "game_phase": f"V2 | Goal: {goal_type} ({goal_conf:.0%})",
+            "activity": f"ctx: {context}",
             "combat_state": "advantage" if bundle.hero.ally_count > bundle.hero.enemy_count else (
                 "disadvantage" if bundle.hero.enemy_count > bundle.hero.ally_count else "even"
             ),

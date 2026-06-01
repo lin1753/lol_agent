@@ -33,7 +33,7 @@
 | 26 | 优化 v2（等级屏蔽+资源修复+二维状态） | ✅ 完成 | PASS | 2026-05-31 |
 | 27 | 优化 v3（HP 血量对比 combat 计算） | ✅ 完成 | PASS | 2026-05-31 |
 | 28 | V2.0 重构：P1 Schema + Feature Engine | ✅ 完成 | PASS | 2026-06-01 |
-| 29 | V2.0 重构：P2 Goal + Decision Engine | 待开始 | - | |
+| 29 | V2.0 重构：P2 Goal + Decision Engine | ✅ 完成 | PASS | 2026-06-01 |
 | 30 | V2.0 重构：P3 Qwen3-8B 推理层 | 待开始 | - | |
 | 31 | V2.0 重构：P4 Memory V2 | 待开始 | - | |
 | 32 | YOLO 模型更新（31类） | 待开始 | - | |
@@ -451,3 +451,31 @@ Screen → YOLO → DetectionSummary → FeatureEngine → FeatureBundle → Con
 ### 测试报告
 - **全量回归**: 181/181 通过（V1 零影响）
 - main.py 语法验证通过
+
+---
+
+## V2.0 P2：Context + Goal + Decision Engine V2（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `reasoning/context_engine.py` — ContextEngine（7 种场景上下文：safe_farm/pressure/siege/defense/contest/collapse/retreat）
+- `reasoning/goal_engine.py` — GoalEngine（9 种战略目标，优先级评分 + 置信度）
+- `reasoning/decision_engine_v2.py` — DecisionEngineV2（Goal 驱动 + 9 条目标规则 + 3 条通用规则 + 候选动作排序）
+- `tests/test_context_engine.py` — 10 个测试用例
+- `tests/test_goal_engine.py` — 12 个测试用例
+- `tests/test_decision_engine_v2.py` — 13 个测试用例
+- `main.py` — V2 全链路集成：FeatureEngine → ContextEngine → GoalEngine → DecisionEngineV2 → Overlay
+
+### V2 完整调用链（P2 完成后）
+```
+Screen → YOLO → DetectionSummary → FeatureEngine → FeatureBundle
+    → ContextEngine → context
+    → GoalEngine → Goal
+    → DecisionEngineV2 → list[Decision]
+    → Console (Goal + Top Decision) + Overlay
+```
+
+### 测试报告
+- **35/35 通过**（P2 新增：10 context + 12 goal + 13 decision）
+- **全量回归**: 216/216 通过（V1 零影响）
