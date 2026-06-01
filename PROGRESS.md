@@ -32,7 +32,7 @@
 | 25 | OCR 优化（帧序号计时+限频） | ✅ 完成 | PASS | 2026-05-31 |
 | 26 | 优化 v2（等级屏蔽+资源修复+二维状态） | ✅ 完成 | PASS | 2026-05-31 |
 | 27 | 优化 v3（HP 血量对比 combat 计算） | ✅ 完成 | PASS | 2026-05-31 |
-| 28 | V2.0 重构：P1 Schema + Feature Engine | 待开始 | - | |
+| 28 | V2.0 重构：P1 Schema + Feature Engine | ✅ 完成 | PASS | 2026-06-01 |
 | 29 | V2.0 重构：P2 Goal + Decision Engine | 待开始 | - | |
 | 30 | V2.0 重构：P3 Qwen3-8B 推理层 | 待开始 | - | |
 | 31 | V2.0 重构：P4 Memory V2 | 待开始 | - | |
@@ -41,6 +41,8 @@
 ---
 
 ## Phase 0：项目初始化
+
+
 
 **状态**：✅ 完成
 
@@ -364,3 +366,88 @@ Overlay 状态面板 + Voice
 - **已推送 GitHub**: https://github.com/lin1753/lol_agent
 - **优化 v2**: 禁用 player_level OCR；中立资源仅追踪小龙+男筠；context 拆分为 game_phase × activity 二维模型（laning/roaming/skirmish/teamfight/objective）
 - **优化 v3**: combat_state 改用 YOLO 检测到的 HP bar 面积比计算（权重 50%），替代 OCR 玩家血量；GameState 新增 ally/enemy_hp_bar_count/total_width 字段
+
+---
+
+## V2.0 P1-T1：6 个 Feature Schema（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `schemas/__init__.py` — 统一导出包
+- `schemas/hero.py` — HeroFeature（ally/enemy count + HP avg/total）
+- `schemas/economy.py` — EconomyFeature（level/gold/kda/items）
+- `schemas/skill.py` — SkillFeature（Q/W/E/R/D/F + 属性：ult_ready/flash_ready/combat_ready）
+- `schemas/wave.py` — WaveFeature（minions/cannons + 属性：wave_strength/lane_pressure）
+- `schemas/objective.py` — ObjectiveFeature（dragon/grub/herald/baron alive）
+- `schemas/map.py` — MapFeature（enemy top/mid/bot + missing + 属性：enemy_visible_total）
+- `tests/test_schemas.py` — 31 个测试用例
+
+### 测试报告
+- **31/31 通过**
+- 覆盖：默认值、自定义值、JSON 序列化/反序列化、范围验证、属性计算（wave_strength/lane_pressure/ult_ready/flash_ready/combat_ready/enemy_visible_total）
+- **全量回归**: 101/101 通过（31 新 + 70 现有 V1 测试）
+
+---
+
+## V2.0 P1-T2：FeatureBundle + GameStateV2 + Goal + Decision（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `schemas/feature_bundle.py` — FeatureBundle（组合 6 个 Feature）
+- `schemas/state.py` — GameStateV2（5 维：phase × activity × context × combat × threat + objective timers）
+- `schemas/goal.py` — Goal（goal_type + confidence，9 种目标类型）
+- `schemas/decision.py` — Decision（action + score + reason）
+- `schemas/__init__.py` — 更新导出全部 10 个 Schema
+- `tests/test_schemas.py` — 扩展至 49 个测试用例
+
+### 测试报告
+- **49/49 通过**（31 T1 + 18 T2 新增）
+- 覆盖：FeatureBundle 组合/嵌套 JSON、GameStateV2 默认值/5 维/负值验证、Goal 9 种类型/置信度范围、Decision 评分范围/排序逻辑
+- **全量回归**: 119/119 通过（49 新 + 70 现有 V1 测试）
+
+---
+
+## V2.0 P1-T3：Feature Engine（2026-06-01）
+
+**状态**：✅ 完成
+
+### 交付文件
+- `reasoning/feature_engine.py` — FeatureEngine 类（6 个内部提取器）
+  - `_extract_hero` — HP bar 面积 → HeroFeature（count + HP avg/total）
+  - `_extract_economy` — OCR KDA/gold/level → EconomyFeature
+  - `_extract_skill` — YOLO skill detections → SkillFeature（bool ready）
+  - `_extract_wave` — YOLO minion counts → WaveFeature
+  - `_extract_objective` — YOLO objective detections → ObjectiveFeature
+  - `_extract_map` — Minimap positions → MapFeature（top/mid/bot 分布 + missing）
+- `tests/test_feature_engine.py` — 19 个测试用例
+- `schemas/hero.py` — 修复 HP avg 约束（移除 le=100，使用 raw area proxy）
+
+### 测试报告
+- **19/19 通过**（Feature Engine）
+- **68/68 通过**（Feature Engine + Schemas）
+- 覆盖：空输入、HP bar 面积计算、可见英雄计数、OCR 经济解析、技能检测、兵线计数、目标检测、小地图位置分布、缺失英雄推算、完整端到端提取
+- **全量回归**: 181/181 通过（含 cv2/torch 依赖测试）
+
+---
+
+## V2.0 P1-T4：main.py --v2 入口（2026-06-01）
+
+**状态**：✅ 完成
+
+### 变更说明
+- `main.py` — 新增 `--v2` CLI 参数，V2 模式使用 FeatureEngine → FeatureBundle
+- V1 路径（StateParser → GameState → TemporalMemory → RuleEngine）完全不变
+- V2 路径独立分支：YOLO → DetectionSummary → FeatureEngine → FeatureBundle → console output + overlay
+- 新增 `_display_v2_status()` 和 `_make_v2_state_info()` 方法
+
+### V2 调用链（当前 P1 阶段）
+```
+Screen → YOLO → DetectionSummary → FeatureEngine → FeatureBundle → Console + Overlay
+```
+（Goal/Decision/Context 引擎将在 P2 接入）
+
+### 测试报告
+- **全量回归**: 181/181 通过（V1 零影响）
+- main.py 语法验证通过

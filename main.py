@@ -3,12 +3,16 @@
 Real-time game understanding loop:
     Screen Capture → ROI → YOLO+OCR → StateParser → TemporalMemory → RuleEngine → Overlay + Voice
 
+V2 pipeline (--v2 flag):
+    Screen Capture → ROI → YOLO+OCR → FeatureEngine → FeatureBundle → (Goal/Decision in P2)
+
 Usage:
     python main.py                      # Auto-detect LOL window
     python main.py --monitor 1          # Capture primary monitor
     python main.py --no-overlay         # Disable overlay
     python main.py --no-voice           # Disable TTS
     python main.py --model weights.pt   # YOLO weights path
+    python main.py --v2 --model weights.pt  # V2 pipeline
 """
 
 from __future__ import annotations
@@ -57,6 +61,7 @@ class LolAgent:
         enable_voice: bool = True,
         monitor: int | str = "auto",
         fps_target: float = 5.0,
+        v2: bool = False,
     ) -> None:
         self._use_gpu = use_gpu
         self._enable_overlay = enable_overlay
@@ -64,6 +69,7 @@ class LolAgent:
         self._fps_target = fps_target
         self._running = False
         self._video_path = video_path
+        self._v2 = v2
 
         # Initialize modules
         print("Initializing LOL Agent...")
@@ -124,8 +130,15 @@ class LolAgent:
             print(f"  OCR: exception {type(e).__name__}: {e}", flush=True)
             self._ocr = None
 
-        # State Parser
+        # State Parser (V1)
         self._state_parser = StateParser()
+
+        # Feature Engine (V2)
+        self._feature_engine = None
+        if v2:
+            from reasoning.feature_engine import FeatureEngine
+            self._feature_engine = FeatureEngine()
+            print("  V2: FeatureEngine enabled")
 
         # Temporal Memory
         self._memory = TemporalMemory(window_size=30)
@@ -242,45 +255,66 @@ class LolAgent:
                             ocr_values["gold"] = str(int(g))
                             self._cached_ocr["gold"] = str(int(g))
 
-                # 5. Parse state
-                state = self._state_parser.parse_with_minimap(
-                    hero_dets, minimap_dets, ocr_values,
-                    frame_shape=frame.shape[:2],
-                    det_summary=det_summary,
-                )
+                # 5. V2 pipeline: FeatureEngine → FeatureBundle
+                if self._v2 and self._feature_engine:
+                    bundle = self._feature_engine.extract(
+                        det_summary, ocr_values, minimap_dets,
+                        minimap_shape=minimap.shape[:2] if minimap is not None else (240, 240),
+                    )
+                    frame_count += 1
+                    elapsed = time.time() - fps_timer
+                    if elapsed >= 1.0:
+                        fps_display = frame_count / elapsed
+                        frame_count = 0
+                        fps_timer = time.time()
 
-                # 6. Update temporal memory
-                self._memory.update(state)
+                    if frame_count % 30 == 0:
+                        self._display_v2_status(bundle, hero_dets, minimap_dets, fps_display)
 
-                # 6b. Enrich state with understanding (phase/context/combat/threat)
-                state = self._state_parser.enrich_state(state, self._memory)
-
-                # 7. Evaluate rules
-                self._rules.clear_recent()
-                warnings = self._rules.evaluate(state, self._memory)
-
-                # 8. Output
-                frame_count += 1
-                elapsed = time.time() - fps_timer
-                if elapsed >= 1.0:
-                    fps_display = frame_count / elapsed
-                    frame_count = 0
-                    fps_timer = time.time()
-
-                # Always show status every 30 frames
-                if frame_count % 30 == 0:
-                    self._display_status(state, hero_dets, minimap_dets, fps_display)
-
-                if warnings:
-                    self._display_warnings(warnings)
                     if self._overlay:
-                        self._overlay.update_warnings(warnings)
+                        self._overlay.update_state(self._make_v2_state_info(bundle))
+
+                # 5b. V1 pipeline: StateParser → GameState
+                else:
+                    # 5. Parse state
+                    state = self._state_parser.parse_with_minimap(
+                        hero_dets, minimap_dets, ocr_values,
+                        frame_shape=frame.shape[:2],
+                        det_summary=det_summary,
+                    )
+
+                    # 6. Update temporal memory
+                    self._memory.update(state)
+
+                    # 6b. Enrich state with understanding (phase/context/combat/threat)
+                    state = self._state_parser.enrich_state(state, self._memory)
+
+                    # 7. Evaluate rules
+                    self._rules.clear_recent()
+                    warnings = self._rules.evaluate(state, self._memory)
+
+                    # 8. Output
+                    frame_count += 1
+                    elapsed = time.time() - fps_timer
+                    if elapsed >= 1.0:
+                        fps_display = frame_count / elapsed
+                        frame_count = 0
+                        fps_timer = time.time()
+
+                    # Always show status every 30 frames
+                    if frame_count % 30 == 0:
+                        self._display_status(state, hero_dets, minimap_dets, fps_display)
+
+                    if warnings:
+                        self._display_warnings(warnings)
+                        if self._overlay:
+                            self._overlay.update_warnings(warnings)
+                            self._overlay.update_state(self._make_state_info(state))
+                        if self._tts:
+                            self._tts.speak_warnings(warnings)
+                    elif self._overlay:
+                        # Update state even without warnings
                         self._overlay.update_state(self._make_state_info(state))
-                    if self._tts:
-                        self._tts.speak_warnings(warnings)
-                elif self._overlay:
-                    # Update state even without warnings
-                    self._overlay.update_state(self._make_state_info(state))
 
                 # Frame rate limiting
                 loop_time = time.time() - loop_start
@@ -332,6 +366,44 @@ class LolAgent:
         }
         print()
 
+    def _display_v2_status(self, bundle, hero_dets: list, minimap_dets: list, fps: float) -> None:
+        """Print V2 pipeline status to console."""
+        mm_enemies = sum(1 for d in minimap_dets if d.team == "enemy")
+        mm_allies = sum(1 for d in minimap_dets if d.team == "ally")
+        h = bundle.hero
+        e = bundle.economy
+        print(
+            f"[V2 | {fps:.1f}FPS] "
+            f"YOLO:{len(hero_dets)} mm:{mm_enemies}E/{mm_allies}A "
+            f"hero:{h.ally_count}A/{h.enemy_count}E "
+            f"KDA:{e.kills}/{e.deaths}/{e.assists} "
+            f"gold:{e.player_gold} lv:{e.player_level} "
+            f"wave:{bundle.wave.lane_pressure} "
+            f"obj:{'D' if bundle.objective.dragon_alive else '-'}"
+            f"{'B' if bundle.objective.baron_alive else '-'} "
+            f"map:{bundle.map.enemy_top}T/{bundle.map.enemy_mid}M/{bundle.map.enemy_bot}B",
+        )
+
+    @staticmethod
+    def _make_v2_state_info(bundle) -> dict:
+        """Convert FeatureBundle to dict for overlay display."""
+        return {
+            "game_phase": "V2",
+            "activity": f"hero:{bundle.hero.ally_count}A/{bundle.hero.enemy_count}E",
+            "combat_state": "advantage" if bundle.hero.ally_count > bundle.hero.enemy_count else (
+                "disadvantage" if bundle.hero.enemy_count > bundle.hero.ally_count else "even"
+            ),
+            "threat_level": "high" if bundle.map.enemy_missing >= 3 else (
+                "medium" if bundle.map.enemy_missing >= 2 else "low"
+            ),
+            "dragon_spawn_in": -1,
+            "baron_spawn_in": -1,
+            "herald_spawn_in": -1,
+            "kda": f"{bundle.economy.kills}/{bundle.economy.deaths}/{bundle.economy.assists}",
+            "gold": bundle.economy.player_gold,
+            "level": bundle.economy.player_level,
+        }
+
     def _display_warnings(self, warnings: list) -> None:
         """Print warnings to console."""
         level_icons = {"info": "●", "warn": "▲", "danger": "★"}
@@ -364,6 +436,7 @@ def main() -> None:
     parser.add_argument("--monitor", default="auto", help="Monitor index or 'auto'")
     parser.add_argument("--fps", type=float, default=5.0, help="Target FPS")
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
+    parser.add_argument("--v2", action="store_true", help="Use V2 pipeline (FeatureEngine)")
     args = parser.parse_args()
 
     agent = LolAgent(
@@ -374,6 +447,7 @@ def main() -> None:
         enable_voice=not args.no_voice,
         monitor=args.monitor,
         fps_target=args.fps,
+        v2=args.v2,
     )
     agent.run()
 
