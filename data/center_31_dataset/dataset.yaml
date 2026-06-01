@@ -1,0 +1,37 @@
+names:
+  0: minimap_fov
+  1: kda
+  2: game_time
+  3: green_hp_hero
+  4: blue_hp_hero
+  5: red_hp_hero
+  6: red_minion
+  7: red_cannon
+  8: blue_minion
+  9: blue_cannon
+  10: blue_tower
+  11: red_tower
+  12: green_hp_bar
+  13: blue_hp_bar
+  14: red_hp_bar
+  15: baron
+  16: herald
+  17: void_grub
+  18: dragon
+  19: minimap
+  20: q_skill
+  21: w_skill
+  22: e_skill
+  23: r_skill
+  24: d_skill
+  25: f_skill
+  26: gold
+  27: player_hp_bar
+  28: player_level
+  29: ally_hero_icon
+  30: enemy_hero_icon
+  31: equipment
+nc: 32
+path: D:\Project\lol_agent\data\center_31_dataset
+train: images/train
+val: images/val

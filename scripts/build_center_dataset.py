@@ -15,7 +15,7 @@ import random
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-# 29 selected classes — full frame detection
+# 31 selected classes — full frame detection
 CENTER_CLASSES = {
     "小地图视野框": 0,
     "KDA": 1,
@@ -46,6 +46,9 @@ CENTER_CLASSES = {
     "金币": 26,
     "用户状态栏血条": 27,
     "用户英雄等级": 28,
+    "队友英雄头像": 29,
+    "敌方英雄头像": 30,
+    "装备": 31,
 }
 
 CENTER_CLASS_NAMES = [
@@ -58,6 +61,7 @@ CENTER_CLASS_NAMES = [
     "minimap",
     "q_skill", "w_skill", "e_skill", "r_skill", "d_skill", "f_skill",
     "gold", "player_hp_bar", "player_level",
+    "ally_hero_icon", "enemy_hero_icon", "equipment",
 ]
 
 

@@ -110,7 +110,13 @@ Training data at `D:\Project\lol_yolo\data`:
 | [hero_name.csv](../lol_yolo/data/hero_name.csv) | Hero name mappings (173 heroes) |
 | [class_map.txt](../lol_yolo/data/class_map.txt) | Class ID to name (UTF-16, 48 classes) |
 
-Generated datasets: `data/center_29_dataset/` (29-class, 575/124 split).
+Generated datasets: `data/center_31_dataset/` (31-class, 575/124 split).
+
+Design documents in `docs/` and project root:
+- `LOL_Agent_DataSchema_V2.0.md` — V2.0 unified data schema
+- `LOL_Agent_系统设计说明书_V2.0.md` — V2.0 system design
+- `docs/v2_diff_analysis.md` — V2.0 vs V1 diff analysis
+- `docs/optimization_v3.md` — HP bar combat optimization
 
 ## Language
 

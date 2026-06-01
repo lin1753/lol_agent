@@ -31,6 +31,12 @@
 | 24 | Overlay 加入实时游戏时间 | ✅ 完成 | PASS | 2026-05-31 |
 | 25 | OCR 优化（帧序号计时+限频） | ✅ 完成 | PASS | 2026-05-31 |
 | 26 | 优化 v2（等级屏蔽+资源修复+二维状态） | ✅ 完成 | PASS | 2026-05-31 |
+| 27 | 优化 v3（HP 血量对比 combat 计算） | ✅ 完成 | PASS | 2026-05-31 |
+| 28 | V2.0 重构：P1 Schema + Feature Engine | 待开始 | - | |
+| 29 | V2.0 重构：P2 Goal + Decision Engine | 待开始 | - | |
+| 30 | V2.0 重构：P3 Qwen3-8B 推理层 | 待开始 | - | |
+| 31 | V2.0 重构：P4 Memory V2 | 待开始 | - | |
+| 32 | YOLO 模型更新（31类） | 待开始 | - | |
 
 ---
 
@@ -357,3 +363,4 @@ Overlay 状态面板 + Voice
 - **OCR 优化**: game_time 从帧序号计算（精确无延迟），player_level 不识别（bbox 太小），gold/kda 每 2 秒 OCR 一次
 - **已推送 GitHub**: https://github.com/lin1753/lol_agent
 - **优化 v2**: 禁用 player_level OCR；中立资源仅追踪小龙+男筠；context 拆分为 game_phase × activity 二维模型（laning/roaming/skirmish/teamfight/objective）
+- **优化 v3**: combat_state 改用 YOLO 检测到的 HP bar 面积比计算（权重 50%），替代 OCR 玩家血量；GameState 新增 ally/enemy_hp_bar_count/total_width 字段
