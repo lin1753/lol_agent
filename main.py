@@ -179,9 +179,9 @@ class LolAgent:
         self._overlay: OverlayUI | None = None
         if enable_overlay:
             try:
-                self._overlay = OverlayUI()
+                self._overlay = OverlayUI(v2=v2)
                 self._overlay.start()
-                print("  Overlay: started")
+                print(f"  Overlay: started ({'V2' if v2 else 'V1'})")
             except Exception as e:
                 print(f"  Overlay: failed ({e})")
 
@@ -331,7 +331,10 @@ class LolAgent:
                             print(f"  LLM: {advice}")
 
                     if self._overlay:
-                        self._overlay.update_state(self._make_v2_state_info(bundle, goal=goal, context=v2_state.context))
+                        self._overlay.update_state(self._make_v2_overlay_data(
+                            bundle, v2_state, goal, decisions, ocr_values, advice
+                        ))
+                        self._overlay.update_decisions(decisions)
 
                 # 5b. V1 pipeline: StateParser → GameState
                 else:
@@ -443,26 +446,38 @@ class LolAgent:
             f"map:{bundle.map.enemy_top}T/{bundle.map.enemy_mid}M/{bundle.map.enemy_bot}B",
         )
 
-    @staticmethod
-    def _make_v2_state_info(bundle, goal=None, context="safe_farm") -> dict:
-        """Convert FeatureBundle + Goal to dict for overlay display."""
-        goal_type = goal.goal_type if goal else "reset"
-        goal_conf = goal.confidence if goal else 0.0
+    def _make_v2_overlay_data(self, bundle, v2_state, goal, decisions, ocr_values, advice=None) -> dict:
+        """Build complete V2 overlay data dict."""
+        # Compute objective timers from ObjectiveMemory
+        dragon_in = -1.0
+        baron_in = -1.0
+        herald_in = -1.0
+        if self._objective_memory:
+            timers = self._objective_memory.get_spawn_timers(v2_state.game_time)
+            dragon_in = timers.get("dragon_spawn_in", -1.0)
+            baron_in = timers.get("baron_spawn_in", -1.0)
+            herald_in = timers.get("herald_spawn_in", -1.0)
+
+        game_time_str = ""
+        if v2_state.game_time > 0:
+            game_time_str = f"{int(v2_state.game_time // 60)}:{int(v2_state.game_time % 60):02d}"
+
         return {
-            "game_phase": f"V2 | Goal: {goal_type} ({goal_conf:.0%})",
-            "activity": f"ctx: {context}",
-            "combat_state": "advantage" if bundle.hero.ally_count > bundle.hero.enemy_count else (
-                "disadvantage" if bundle.hero.enemy_count > bundle.hero.ally_count else "even"
-            ),
-            "threat_level": "high" if bundle.map.enemy_missing >= 3 else (
-                "medium" if bundle.map.enemy_missing >= 2 else "low"
-            ),
-            "dragon_spawn_in": -1,
-            "baron_spawn_in": -1,
-            "herald_spawn_in": -1,
+            "game_time": game_time_str,
+            "phase": v2_state.phase,
+            "activity": v2_state.activity,
+            "context": v2_state.context,
+            "combat": v2_state.combat,
+            "threat": v2_state.threat,
             "kda": f"{bundle.economy.kills}/{bundle.economy.deaths}/{bundle.economy.assists}",
             "gold": bundle.economy.player_gold,
             "level": bundle.economy.player_level,
+            "dragon_spawn_in": dragon_in,
+            "baron_spawn_in": baron_in,
+            "herald_spawn_in": herald_in,
+            "goal_type": goal.goal_type if goal else "",
+            "goal_confidence": goal.confidence if goal else 0.0,
+            "advice": advice or "",
         }
 
     def _display_warnings(self, warnings: list) -> None:
