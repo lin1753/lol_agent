@@ -19,3 +19,11 @@ class HeroFeature(BaseModel):
     enemy_hp_total: float = Field(default=0.0, ge=0.0, description="Sum of enemy HP percentages")
     visible_allies: int = Field(default=0, ge=0, description="Allies in center viewport")
     visible_enemies: int = Field(default=0, ge=0, description="Enemies in center viewport")
+
+    @property
+    def hp_ratio(self) -> float:
+        """HP advantage ratio: -1.0 (all enemy) to +1.0 (all ally), 0 = equal."""
+        total = self.ally_hp_total + self.enemy_hp_total
+        if total == 0:
+            return 0.0
+        return (self.ally_hp_total - self.enemy_hp_total) / total

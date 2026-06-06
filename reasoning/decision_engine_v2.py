@@ -78,7 +78,16 @@ def _rule_contest_dragon(state, goal, features, memory):
         score += 10.0
     if 0 <= state.dragon_spawn_in <= 30:
         score += 10.0
-    return Decision(action="contest_dragon", score=min(score, 100.0),
+    # HP ratio bonus
+    hp = features.hero.hp_ratio
+    if hp > 0.3:
+        score += 5.0
+    elif hp < -0.3:
+        score -= 10.0
+    # Ult ready bonus
+    if features.skill.ult_ready:
+        score += 5.0
+    return Decision(action="contest_dragon", score=min(max(score, 0), 100.0),
                     reason=_reason("小龙争夺", state, features))
 
 
@@ -93,7 +102,14 @@ def _rule_contest_baron(state, goal, features, memory):
         score += 10.0
     if state.phase == "late":
         score += 10.0
-    return Decision(action="contest_baron", score=min(score, 100.0),
+    hp = features.hero.hp_ratio
+    if hp > 0.3:
+        score += 5.0
+    elif hp < -0.3:
+        score -= 10.0
+    if features.skill.ult_ready:
+        score += 5.0
+    return Decision(action="contest_baron", score=min(max(score, 0), 100.0),
                     reason=_reason("男爵争夺", state, features))
 
 
@@ -150,8 +166,19 @@ def _rule_group_fight(state, goal, features, memory):
         score += 20.0
     if state.combat == "advantage":
         score += 15.0
-    return Decision(action="group", score=min(score, 100.0),
-                    reason="人数优势，建议集合团战")
+    # Ult ready is critical for teamfight
+    if features.skill.ult_ready:
+        score += 10.0
+    else:
+        score -= 10.0  # No ult = risky to fight
+    # HP ratio
+    hp = features.hero.hp_ratio
+    if hp > 0.2:
+        score += 5.0
+    elif hp < -0.2:
+        score -= 10.0
+    return Decision(action="group", score=min(max(score, 0), 100.0),
+                    reason="人数优势，建议集合团战" if features.hero.ally_count >= 4 else "建议集合团战")
 
 
 def _rule_retreat(state, goal, features, memory):
@@ -163,8 +190,17 @@ def _rule_retreat(state, goal, features, memory):
         score += 10.0
     if features.hero.enemy_count > features.hero.ally_count + 1:
         score += 10.0
-    return Decision(action="retreat", score=min(score, 100.0),
-                    reason="局势不利，建议后撤")
+    # No flash = higher urgency to retreat early
+    if not features.skill.flash_ready:
+        score += 5.0
+    # HP ratio
+    hp = features.hero.hp_ratio
+    if hp < -0.3:
+        score += 10.0
+    reason = "局势不利，建议后撤"
+    if not features.skill.flash_ready:
+        reason += "（无闪现）"
+    return Decision(action="retreat", score=min(score, 100.0), reason=reason)
 
 
 def _rule_reset(state, goal, features, memory):
@@ -178,10 +214,11 @@ def _rule_reset(state, goal, features, memory):
 
 def _rule_low_hp_warning(state, goal, features, memory):
     """Low HP → suggest retreat regardless of goal."""
-    # EconomyFeature doesn't have HP, but threat level reflects it
-    if state.threat == "high":
+    hp = features.hero.hp_ratio
+    # HP ratio < -0.4 means significantly more enemy HP
+    if hp < -0.4 or state.threat == "high":
         return Decision(action="retreat", score=85.0,
-                        reason="血量过低，建议回城")
+                        reason="血量劣势，建议回城")
     return None
 
 

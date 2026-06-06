@@ -59,11 +59,26 @@ class GoalEngine:
         # --- Combat goals ---
         if state.combat == "advantage" and features.hero.ally_count >= 3:
             score = min(0.7 + features.hero.ally_count * 0.05, 0.95)
-            candidates.append(Goal(goal_type="group", confidence=score))
+            # Ult ready is critical for group fights
+            if features.skill.ult_ready:
+                score += 0.1
+            else:
+                score -= 0.1
+            # HP ratio bonus
+            hp = features.hero.hp_ratio
+            if hp > 0.2:
+                score += 0.05
+            candidates.append(Goal(goal_type="group", confidence=min(score, 1.0)))
 
         if state.threat == "high" or state.combat == "disadvantage":
             score = 0.8 if state.threat == "high" else 0.6
-            candidates.append(Goal(goal_type="retreat", confidence=score))
+            # HP ratio amplifies retreat urgency
+            hp = features.hero.hp_ratio
+            if hp < -0.3:
+                score += 0.1
+            if not features.skill.flash_ready:
+                score += 0.05
+            candidates.append(Goal(goal_type="retreat", confidence=min(score, 1.0)))
 
         # --- Map control goals ---
         if (features.wave.wave_strength > 0.3
@@ -110,6 +125,17 @@ class GoalEngine:
             score += 0.15
         elif features.hero.enemy_count > features.hero.ally_count:
             score -= 0.1
+
+        # HP ratio bonus (more granular than combat string)
+        hp = features.hero.hp_ratio
+        if hp > 0.3:
+            score += 0.1
+        elif hp < -0.3:
+            score -= 0.1
+
+        # Ult ready for objective fight
+        if features.skill.ult_ready:
+            score += 0.05
 
         # Urgency: closer spawn = higher score
         if obj_type == "dragon" and 0 <= state.dragon_spawn_in <= 30:
