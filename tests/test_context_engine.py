@@ -43,10 +43,10 @@ class TestContextEngine:
         assert engine.compute(features, state, mem) == "retreat"
 
     def test_collapse_enemy_pushing(self, engine):
-        """3+ enemies + many minions + few allies → collapse."""
+        """2+ enemies + minions pushing + few allies → collapse."""
         features = FeatureBundle(
-            wave=WaveFeature(enemy_minions=7),
-            hero=HeroFeature(enemy_count=3, ally_count=1),
+            wave=WaveFeature(enemy_minions=5),
+            hero=HeroFeature(enemy_count=2, ally_count=1),
         )
         state = GameStateV2()
         mem = TemporalMemory()
@@ -81,10 +81,10 @@ class TestContextEngine:
         assert engine.compute(features, state, mem) == "siege"
 
     def test_defense_enemy_pushing(self, engine):
-        """Enemy minions + enemies present + few allies → defense."""
+        """Enemy minions + enemies present + equal allies → defense."""
         features = FeatureBundle(
             wave=WaveFeature(enemy_minions=5),
-            hero=HeroFeature(enemy_count=3, ally_count=1),
+            hero=HeroFeature(enemy_count=2, ally_count=2),
         )
         state = GameStateV2()
         mem = TemporalMemory()

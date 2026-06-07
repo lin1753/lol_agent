@@ -297,7 +297,7 @@ class TestGoal:
     def test_defaults(self):
         from schemas.goal import Goal
         g = Goal()
-        assert g.goal_type == "reset"
+        assert g.goal_type == "farm"
         assert g.confidence == 0.0
 
     def test_custom_values(self):

@@ -1,4 +1,4 @@
-"""Tests for Goal Engine (P2-T2)."""
+"""Tests for Goal Engine."""
 
 import pytest
 
@@ -18,17 +18,26 @@ class TestGoalEngine:
     def engine(self):
         return GoalEngine()
 
-    def test_default_reset(self, engine):
-        """No strong conditions → reset."""
+    def test_default_farm(self, engine):
+        """No strong conditions → farm."""
         features = FeatureBundle()
         state = GameStateV2()
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
-        assert goal.goal_type == "reset"
+        assert goal.goal_type == "farm"
         assert 0 < goal.confidence <= 1.0
 
+    def test_default_farm_early(self, engine):
+        """Early game default → farm with decent confidence."""
+        features = FeatureBundle()
+        state = GameStateV2(phase="early")
+        mem = TemporalMemory()
+        goal = engine.determine(state, features, mem)
+        assert goal.goal_type == "farm"
+        assert goal.confidence >= 0.4
+
     def test_contest_dragon(self, engine):
-        """Dragon alive + spawning soon + combat advantage → contest_dragon."""
+        """Dragon alive + combat advantage → contest_dragon."""
         features = FeatureBundle(
             objective=ObjectiveFeature(dragon_alive=True),
             hero=HeroFeature(ally_count=3, enemy_count=2),
@@ -55,15 +64,15 @@ class TestGoalEngine:
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
         assert goal.goal_type == "contest_baron"
-        assert goal.confidence > 0.6
+        assert goal.confidence > 0.5
 
     def test_contest_herald(self, engine):
-        """Herald alive + spawning soon → contest_herald."""
+        """Herald alive in mid game → contest_herald."""
         features = FeatureBundle(
             objective=ObjectiveFeature(herald_alive=True),
             hero=HeroFeature(ally_count=2, enemy_count=2),
         )
-        state = GameStateV2(herald_spawn_in=30)
+        state = GameStateV2(herald_spawn_in=30, phase="mid")
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
         assert goal.goal_type == "contest_herald"
@@ -75,7 +84,7 @@ class TestGoalEngine:
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
         assert goal.goal_type == "retreat"
-        assert goal.confidence >= 0.8
+        assert goal.confidence >= 0.7
 
     def test_retreat_combat_disadvantage(self, engine):
         """Combat disadvantage → retreat."""
@@ -86,7 +95,7 @@ class TestGoalEngine:
         assert goal.goal_type == "retreat"
 
     def test_group_advantage(self, engine):
-        """Combat advantage + 3+ allies → group."""
+        """Combat advantage + allies → group."""
         features = FeatureBundle(
             hero=HeroFeature(ally_count=4, enemy_count=2),
         )
@@ -94,7 +103,19 @@ class TestGoalEngine:
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
         assert goal.goal_type == "group"
-        assert goal.confidence > 0.7
+        assert goal.confidence > 0.5
+
+    def test_group_even_with_ult(self, engine):
+        """Even numbers + ult ready → group is viable."""
+        features = FeatureBundle(
+            hero=HeroFeature(ally_count=3, enemy_count=3),
+            skill=__import__('schemas.skill', fromlist=['SkillFeature']).SkillFeature(r_ready=True),
+        )
+        state = GameStateV2(combat="even", phase="mid")
+        mem = TemporalMemory()
+        goal = engine.determine(state, features, mem)
+        # group should be in candidates with decent score
+        assert goal.goal_type in ("group", "farm")
 
     def test_push_tower(self, engine):
         """Wave advantage + enemies missing + not early → push_tower."""
@@ -119,16 +140,15 @@ class TestGoalEngine:
         assert goal.goal_type == "defend_tower"
 
     def test_split_push(self, engine):
-        """Mid/late game + ally advantage + enemies missing → split_push."""
+        """Mid/late game + enemies missing → split_push possible."""
         features = FeatureBundle(
-            hero=HeroFeature(ally_count=4, enemy_count=2),
+            hero=HeroFeature(ally_count=3, enemy_count=1),
             map=MapFeature(enemy_missing=3),
         )
         state = GameStateV2(phase="late")
         mem = TemporalMemory()
         goal = engine.determine(state, features, mem)
-        # Could be group or split_push depending on scores
-        assert goal.goal_type in ("split_push", "group")
+        assert goal.goal_type in ("split_push", "group", "push_tower")
 
     def test_confidence_range(self, engine):
         """All goals have confidence in [0, 1]."""

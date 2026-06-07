@@ -15,7 +15,7 @@ GOAL_TYPES = [
     "split_push",
     "group",
     "retreat",
-    "reset",
+    "farm",
 ]
 
 
@@ -23,7 +23,7 @@ class Goal(BaseModel):
     """The current strategic goal determined by GoalEngine."""
 
     goal_type: str = Field(
-        default="reset",
+        default="farm",
         description="Strategic goal type (one of GOAL_TYPES)",
     )
     confidence: float = Field(

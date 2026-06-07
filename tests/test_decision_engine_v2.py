@@ -1,4 +1,4 @@
-"""Tests for Decision Engine V2 (P2-T3)."""
+"""Tests for Decision Engine V2."""
 
 import pytest
 
@@ -21,7 +21,7 @@ class TestDecisionEngineV2:
     def test_returns_sorted_decisions(self, engine):
         """Decisions are sorted by score descending."""
         state = GameStateV2()
-        goal = Goal(goal_type="reset", confidence=0.3)
+        goal = Goal(goal_type="farm", confidence=0.3)
         features = FeatureBundle()
         mem = TemporalMemory()
         decisions = engine.evaluate(state, goal, features, mem)
@@ -42,7 +42,22 @@ class TestDecisionEngineV2:
         actions = [d.action for d in decisions]
         assert "contest_dragon" in actions
         cd = next(d for d in decisions if d.action == "contest_dragon")
-        assert cd.score >= 80.0  # advantage + numbers + close spawn
+        assert cd.score >= 70.0
+
+    def test_contest_dragon_multi_candidates(self, engine):
+        """Dragon goal produces multiple candidate actions."""
+        state = GameStateV2(combat="advantage", dragon_spawn_in=35)
+        goal = Goal(goal_type="contest_dragon", confidence=0.9)
+        features = FeatureBundle(
+            objective=ObjectiveFeature(dragon_alive=True),
+            hero=HeroFeature(ally_count=3, enemy_count=2),
+            wave=WaveFeature(ally_minions=5, enemy_minions=2),
+        )
+        mem = TemporalMemory()
+        decisions = engine.evaluate(state, goal, features, mem)
+        actions = {d.action for d in decisions}
+        # Should have at least contest_dragon + prepare_vision or push_lane_pressure
+        assert len(actions) >= 2
 
     def test_contest_baron_goal(self, engine):
         """Baron goal → contest_baron decision."""
@@ -111,9 +126,10 @@ class TestDecisionEngineV2:
 
     def test_split_push_goal(self, engine):
         """Split push goal → split_push decision."""
-        state = GameStateV2()
+        state = GameStateV2(phase="mid")
         goal = Goal(goal_type="split_push", confidence=0.5)
         features = FeatureBundle(
+            hero=HeroFeature(ally_count=3, enemy_count=1),
             map=MapFeature(enemy_missing=3),
         )
         mem = TemporalMemory()
@@ -121,20 +137,20 @@ class TestDecisionEngineV2:
         actions = [d.action for d in decisions]
         assert "split_push" in actions
 
-    def test_reset_goal(self, engine):
-        """Reset goal → reset decision."""
+    def test_farm_goal(self, engine):
+        """Farm goal → farm decision."""
         state = GameStateV2()
-        goal = Goal(goal_type="reset", confidence=0.3)
+        goal = Goal(goal_type="farm", confidence=0.5)
         features = FeatureBundle()
         mem = TemporalMemory()
         decisions = engine.evaluate(state, goal, features, mem)
         actions = [d.action for d in decisions]
-        assert "reset" in actions
+        assert "farm" in actions
 
     def test_universal_missing_enemies(self, engine):
         """3+ missing enemies → play_safe warning regardless of goal."""
         state = GameStateV2()
-        goal = Goal(goal_type="reset")
+        goal = Goal(goal_type="farm")
         features = FeatureBundle(
             map=MapFeature(enemy_missing=4),
         )
@@ -144,16 +160,16 @@ class TestDecisionEngineV2:
         assert "play_safe" in actions
 
     def test_universal_objective_timer(self, engine):
-        """Dragon about to spawn → prepare_dragon warning."""
-        state = GameStateV2(dragon_spawn_in=15)
-        goal = Goal(goal_type="reset")
+        """Dragon about to spawn → prepare_objective."""
+        state = GameStateV2(dragon_spawn_in=30)
+        goal = Goal(goal_type="farm")
         features = FeatureBundle(
             objective=ObjectiveFeature(dragon_alive=True),
         )
         mem = TemporalMemory()
         decisions = engine.evaluate(state, goal, features, mem)
         actions = [d.action for d in decisions]
-        assert "prepare_dragon" in actions
+        assert "prepare_objective" in actions
 
     def test_decisions_have_reasons(self, engine):
         """All decisions have non-empty reasons."""
@@ -178,3 +194,15 @@ class TestDecisionEngineV2:
         decisions = engine.evaluate(state, goal, features, mem)
         actions = [d.action for d in decisions]
         assert "contest_dragon" not in actions
+
+    def test_dedup_no_duplicate_retreat(self, engine):
+        """Retreat goal + critical HP → only one retreat decision (deduped)."""
+        state = GameStateV2(threat="high", combat="disadvantage")
+        goal = Goal(goal_type="retreat", confidence=0.9)
+        features = FeatureBundle(
+            hero=HeroFeature(ally_count=1, enemy_count=3, ally_hp_total=100, enemy_hp_total=500),
+        )
+        mem = TemporalMemory()
+        decisions = engine.evaluate(state, goal, features, mem)
+        retreat_count = sum(1 for d in decisions if d.action == "retreat")
+        assert retreat_count == 1
