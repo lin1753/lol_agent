@@ -332,7 +332,7 @@ class LolAgent:
 
                     if self._overlay:
                         self._overlay.update_state(self._make_v2_overlay_data(
-                            bundle, v2_state, goal, decisions, ocr_values, advice
+                            bundle, v2_state, goal, decisions, ocr_values, advice, fps=fps_display
                         ))
                         self._overlay.update_decisions(decisions)
 
@@ -446,7 +446,7 @@ class LolAgent:
             f"map:{bundle.map.enemy_top}T/{bundle.map.enemy_mid}M/{bundle.map.enemy_bot}B",
         )
 
-    def _make_v2_overlay_data(self, bundle, v2_state, goal, decisions, ocr_values, advice=None) -> dict:
+    def _make_v2_overlay_data(self, bundle, v2_state, goal, decisions, ocr_values, advice=None, fps=0.0) -> dict:
         """Build complete V2 overlay data dict."""
         # Compute objective timers from ObjectiveMemory
         dragon_in = -1.0
@@ -462,15 +462,24 @@ class LolAgent:
         if v2_state.game_time > 0:
             game_time_str = f"{int(v2_state.game_time // 60)}:{int(v2_state.game_time % 60):02d}"
 
+        # OCR status
+        ocr_ready = self._ocr is not None and self._ocr._ready if self._ocr else False
+        has_kda = bool(ocr_values.get("kda"))
+        has_gold = bool(ocr_values.get("gold"))
+
         return {
             "game_time": game_time_str,
+            "fps": fps,
+            "ocr_ready": ocr_ready,
+            "has_kda": has_kda,
+            "has_gold": has_gold,
             "phase": v2_state.phase,
             "activity": v2_state.activity,
             "context": v2_state.context,
             "combat": v2_state.combat,
             "threat": v2_state.threat,
-            "kda": f"{bundle.economy.kills}/{bundle.economy.deaths}/{bundle.economy.assists}",
-            "gold": bundle.economy.player_gold,
+            "kda": ocr_values.get("kda", ""),
+            "gold": bundle.economy.player_gold if has_gold else 0,
             "level": bundle.economy.player_level,
             "dragon_spawn_in": dragon_in,
             "baron_spawn_in": baron_in,
@@ -478,6 +487,11 @@ class LolAgent:
             "goal_type": goal.goal_type if goal else "",
             "goal_confidence": goal.confidence if goal else 0.0,
             "advice": advice or "",
+            "ally_count": bundle.hero.ally_count,
+            "enemy_count": bundle.hero.enemy_count,
+            "hp_ratio": bundle.hero.hp_ratio,
+            "ult_ready": bundle.skill.ult_ready,
+            "flash_ready": bundle.skill.flash_ready,
         }
 
     def _display_warnings(self, warnings: list) -> None:
