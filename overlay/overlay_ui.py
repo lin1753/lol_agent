@@ -303,7 +303,7 @@ class OverlayWidgetV2(OverlayWidget):
         game_time = si.get("game_time", "") if si else ""
         fps = si.get("fps", 0) if si else 0
         if game_time:
-            right_text = f"{game_time}  {fps:.0f}FPS"
+            right_text = game_time
             painter.setFont(QFont("Microsoft YaHei", 10))
             rx = w - painter.fontMetrics().horizontalAdvance(right_text) + 12
             painter.drawText(rx, y + 12, right_text)
@@ -429,18 +429,43 @@ class OverlayWidgetV2(OverlayWidget):
                 painter.drawText(12, y + 12, f"→ {action} ({score:.0f}) {reason_short}")
                 y += 20
 
-        # === OBJECTIVES ===
-        obj_parts = []
-        for key, label in [("dragon_spawn_in", "龙"), ("baron_spawn_in", "男"), ("herald_spawn_in", "先")]:
+        # === OBJECTIVES (upper/lower pit grouping) ===
+        def _fmt_timer(v):
+            """Smart timer format: >120s → 2m+, ≤120s → M:SS"""
+            if v < 0:
+                return None
+            if v > 120:
+                return "2m+"
+            m, s = divmod(int(v), 60)
+            return f"{m}:{s:02d}"
+
+        # Lower Pit (Dragon Pit): dragon, elder
+        lower_parts = []
+        for key, label in [("dragon_spawn_in", "龙"), ("elder_spawn_in", "远古")]:
             v = si.get(key, -1)
-            if 0 <= v <= 120:
-                obj_parts.append(f"{label}:{int(v)}s")
-        if obj_parts:
+            t = _fmt_timer(v)
+            if t:
+                lower_parts.append(f"{label} {t}")
+
+        # Upper Pit (Baron Pit): grub, herald, baron
+        upper_parts = []
+        for key, label in [("grub_spawn_in", "虫"), ("herald_spawn_in", "先锋"), ("baron_spawn_in", "男爵")]:
+            v = si.get(key, -1)
+            t = _fmt_timer(v)
+            if t:
+                upper_parts.append(f"{label} {t}")
+
+        if lower_parts or upper_parts:
             divider()
-            painter.setPen(QColor(255, 200, 50))
             painter.setFont(QFont("Microsoft YaHei", 9))
-            painter.drawText(12, y + 12, "  ".join(obj_parts))
-            y += 20
+            if lower_parts:
+                painter.setPen(QColor(100, 180, 255))
+                painter.drawText(12, y + 12, "下河道: " + "  ".join(lower_parts))
+                y += 20
+            if upper_parts:
+                painter.setPen(QColor(255, 180, 100))
+                painter.drawText(12, y + 12, "上河道: " + "  ".join(upper_parts))
+                y += 20
 
         # === WARNINGS ===
         if self._warnings:

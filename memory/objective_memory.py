@@ -1,4 +1,12 @@
-"""Objective Memory — tracks neutral objective kill/respawn times."""
+"""Objective Memory — tracks neutral objective kill/respawn times.
+
+2025/2026 LOL objective timing:
+- Dragon (Lower Pit): 5:00 first spawn, 5:00 respawn
+- Elder Dragon (Lower Pit): spawns after Dragon Soul, 10:00 respawn
+- Voidgrubs (Upper Pit): 5:00 first spawn
+- Herald (Upper Pit): 15:00 first spawn, 19:30 despawn
+- Baron (Upper Pit): 25:00 first spawn, 6:00 respawn
+"""
 
 from __future__ import annotations
 
@@ -6,15 +14,15 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# LOL objective timing constants (seconds)
+# LOL 2025/2026 objective timing constants (seconds)
 DRAGON_FIRST_SPAWN = 300     # 5:00
 DRAGON_RESPAWN = 300         # 5 minutes
-BARON_FIRST_SPAWN = 1200     # 20:00
+GRUB_FIRST_SPAWN = 300       # 5:00 (updated from 8:00)
+HERALD_FIRST_SPAWN = 900     # 15:00 (updated from 8:00)
+HERALD_DESPAWN = 1170        # 19:30 (updated from 11:00)
+BARON_FIRST_SPAWN = 1500     # 25:00 (updated from 20:00)
 BARON_RESPAWN = 360          # 6 minutes
-HERALD_FIRST_SPAWN = 480     # 8:00
-HERALD_DESPAWN = 660         # 11:00
-HERALD_RESPAWN = 240         # 4 minutes
-GRUB_FIRST_SPAWN = 480       # 8:00 (same as herald)
+ELDER_RESPAWN = 600          # 10 minutes (spawns after Dragon Soul)
 
 
 @dataclass
@@ -29,6 +37,9 @@ class ObjectiveRecord:
 class ObjectiveMemory:
     """Tracks objective kill times and computes respawn timers.
 
+    Upper Pit (Baron Pit): herald, grub, baron
+    Lower Pit (Dragon Pit): dragon, elder
+
     Usage:
         mem = ObjectiveMemory()
         mem.record_kill("dragon", game_time=600)
@@ -41,7 +52,9 @@ class ObjectiveMemory:
             "baron": ObjectiveRecord(name="baron"),
             "herald": ObjectiveRecord(name="herald"),
             "grub": ObjectiveRecord(name="grub"),
+            "elder": ObjectiveRecord(name="elder"),
         }
+        self._dragon_soul_claimed = False
 
     def record_kill(self, objective: str, game_time: float) -> None:
         """Record that an objective was killed at game_time."""
@@ -56,6 +69,10 @@ class ObjectiveMemory:
         if objective in self._objectives:
             self._objectives[objective].alive = True
 
+    def set_dragon_soul_claimed(self) -> None:
+        """Mark that Dragon Soul has been claimed (triggers Elder Dragon)."""
+        self._dragon_soul_claimed = True
+
     def get_spawn_timers(self, current_time: float) -> dict[str, float]:
         """Compute seconds until next spawn for each objective.
 
@@ -63,36 +80,57 @@ class ObjectiveMemory:
         """
         timers = {}
 
-        # Dragon
+        # Dragon (Lower Pit)
         timers["dragon_spawn_in"] = self._compute_timer(
             self._objectives["dragon"], current_time,
             DRAGON_FIRST_SPAWN, DRAGON_RESPAWN,
         )
 
-        # Baron
+        # Elder Dragon (Lower Pit) — only after Dragon Soul
+        if self._dragon_soul_claimed:
+            timers["elder_spawn_in"] = self._compute_timer(
+                self._objectives["elder"], current_time,
+                0,  # first spawn is immediate after soul
+                ELDER_RESPAWN,
+            )
+        else:
+            timers["elder_spawn_in"] = -1.0
+
+        # Voidgrubs (Upper Pit) — spawns once at 5:00, no respawn
+        grub_rec = self._objectives["grub"]
+        if grub_rec.alive:
+            if current_time < GRUB_FIRST_SPAWN:
+                timers["grub_spawn_in"] = GRUB_FIRST_SPAWN - current_time
+            else:
+                timers["grub_spawn_in"] = 0.0  # Already spawned
+        else:
+            timers["grub_spawn_in"] = -1.0  # Dead, no respawn
+
+        # Herald (Upper Pit) — 15:00 to 19:30
+        rec = self._objectives["herald"]
+        if rec.alive:
+            if current_time < HERALD_FIRST_SPAWN:
+                timers["herald_spawn_in"] = HERALD_FIRST_SPAWN - current_time
+            elif current_time <= HERALD_DESPAWN:
+                timers["herald_spawn_in"] = 0.0  # Available
+            else:
+                timers["herald_spawn_in"] = -1.0  # Past despawn
+        elif rec.last_killed_time is not None:
+            if current_time < HERALD_DESPAWN:
+                timers["herald_spawn_in"] = -1.0  # Dead, no respawn
+            else:
+                timers["herald_spawn_in"] = -1.0
+        else:
+            if current_time < HERALD_FIRST_SPAWN:
+                timers["herald_spawn_in"] = HERALD_FIRST_SPAWN - current_time
+            else:
+                timers["herald_spawn_in"] = -1.0
+
+        # Baron (Upper Pit)
         timers["baron_spawn_in"] = self._compute_timer(
             self._objectives["baron"], current_time,
             BARON_FIRST_SPAWN, BARON_RESPAWN,
         )
-
-        # Herald
-        rec = self._objectives["herald"]
-        if rec.alive:
-            if HERALD_FIRST_SPAWN <= current_time <= HERALD_DESPAWN:
-                time_since = current_time - HERALD_FIRST_SPAWN
-                timers["herald_spawn_in"] = HERALD_RESPAWN - (time_since % HERALD_RESPAWN)
-            elif current_time < HERALD_FIRST_SPAWN:
-                timers["herald_spawn_in"] = HERALD_FIRST_SPAWN - current_time
-            else:
-                timers["herald_spawn_in"] = -1.0  # Past despawn
-        elif rec.last_killed_time is not None:
-            remaining = HERALD_RESPAWN - (current_time - rec.last_killed_time)
-            if current_time < HERALD_DESPAWN:
-                timers["herald_spawn_in"] = max(0, remaining)
-            else:
-                timers["herald_spawn_in"] = -1.0
-        else:
-            timers["herald_spawn_in"] = -1.0
 
         return timers
 
@@ -106,6 +144,7 @@ class ObjectiveMemory:
             rec.alive = True
             rec.last_killed_time = None
             rec.kill_count = 0
+        self._dragon_soul_claimed = False
 
     @staticmethod
     def _compute_timer(

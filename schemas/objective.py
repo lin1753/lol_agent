@@ -12,3 +12,4 @@ class ObjectiveFeature(BaseModel):
     grub_alive: bool = Field(default=False)
     herald_alive: bool = Field(default=False)
     baron_alive: bool = Field(default=False)
+    elder_alive: bool = Field(default=False)

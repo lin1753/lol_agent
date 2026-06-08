@@ -465,11 +465,15 @@ class LolAgent:
         dragon_in = -1.0
         baron_in = -1.0
         herald_in = -1.0
+        grub_in = -1.0
+        elder_in = -1.0
         if self._objective_memory:
             timers = self._objective_memory.get_spawn_timers(v2_state.game_time)
             dragon_in = timers.get("dragon_spawn_in", -1.0)
             baron_in = timers.get("baron_spawn_in", -1.0)
             herald_in = timers.get("herald_spawn_in", -1.0)
+            grub_in = timers.get("grub_spawn_in", -1.0)
+            elder_in = timers.get("elder_spawn_in", -1.0)
 
         game_time_str = ""
         if v2_state.game_time > 0:
@@ -497,6 +501,8 @@ class LolAgent:
             "dragon_spawn_in": dragon_in,
             "baron_spawn_in": baron_in,
             "herald_spawn_in": herald_in,
+            "grub_spawn_in": grub_in,
+            "elder_spawn_in": elder_in,
             "goal_type": goal.goal_type if goal else "",
             "goal_confidence": goal.confidence if goal else 0.0,
             "advice": advice or "",
