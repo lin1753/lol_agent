@@ -63,6 +63,7 @@ class LolAgent:
         fps_target: float = 5.0,
         v2: bool = False,
         enable_llm: bool = False,
+        debug: bool = False,
     ) -> None:
         self._use_gpu = use_gpu
         self._enable_overlay = enable_overlay
@@ -71,6 +72,7 @@ class LolAgent:
         self._running = False
         self._video_path = video_path
         self._v2 = v2
+        self._debug = debug
 
         # Initialize modules
         print("Initializing LOL Agent...")
@@ -290,6 +292,17 @@ class LolAgent:
                         det_summary, ocr_values, minimap_dets,
                         minimap_shape=minimap.shape[:2] if minimap is not None else (240, 240),
                     )
+
+                    # Debug: show OCR and detection data
+                    if self._debug and frame_count % 30 == 0:
+                        print(f"  [DEBUG] ocr_values={ocr_values}")
+                        print(f"  [DEBUG] YOLO dets={len(yolo_dets)} | OCR regions={list(det_summary.ocr_regions.keys())}")
+                        print(f"  [DEBUG] skills={[s.skill for s in det_summary.skills]}")
+                        print(f"  [DEBUG] hp_bars: ally={len(det_summary.ally_hp_bars)} enemy={len(det_summary.enemy_hp_bars)}")
+                        print(f"  [DEBUG] minions: blue={det_summary.blue_minions} red={det_summary.red_minions}")
+                        print(f"  [DEBUG] objectives={det_summary.objectives}")
+                        print(f"  [DEBUG] minimap_dets={len(minimap_dets)} (enemy={sum(1 for d in minimap_dets if d.team=='enemy')})")
+                        print(f"  [DEBUG] bundle.economy: lv={bundle.economy.player_level} gold={bundle.economy.player_gold} kda={bundle.economy.kills}/{bundle.economy.deaths}/{bundle.economy.assists}")
 
                     # Parse game time for state
                     game_time = StateParser._parse_time(ocr_values.get("time", ""))
@@ -530,6 +543,7 @@ def main() -> None:
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
     parser.add_argument("--v2", action="store_true", help="Use V2 pipeline (FeatureEngine)")
     parser.add_argument("--llm", action="store_true", help="Enable Qwen3-8B LLM advice (requires --v2)")
+    parser.add_argument("--debug", action="store_true", help="Show debug info (OCR, YOLO, Feature data)")
     args = parser.parse_args()
 
     agent = LolAgent(
@@ -542,6 +556,7 @@ def main() -> None:
         fps_target=args.fps,
         v2=args.v2,
         enable_llm=args.llm,
+        debug=args.debug,
     )
     agent.run()
 
