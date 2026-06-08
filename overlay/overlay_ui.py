@@ -236,6 +236,14 @@ class OverlayWidgetV2(OverlayWidget):
         self._auto_resize()
         self.update()
 
+    def _trunc(self, painter: QPainter, text: str, max_width: int) -> str:
+        """Truncate text to fit within max_width pixels."""
+        if painter.fontMetrics().horizontalAdvance(text) <= max_width:
+            return text
+        while len(text) > 1 and painter.fontMetrics().horizontalAdvance(text + "..") > max_width:
+            text = text[:-1]
+        return text + ".."
+
     def _auto_resize(self) -> None:
         n_warn = len(self._warnings)
         n_dec = min(len(self._decisions), 3)
@@ -423,19 +431,16 @@ class OverlayWidgetV2(OverlayWidget):
                 action = d.get("action", "") if isinstance(d, dict) else getattr(d, "action", "")
                 score = d.get("score", 0) if isinstance(d, dict) else getattr(d, "score", 0)
                 reason = d.get("reason", "") if isinstance(d, dict) else getattr(d, "reason", "")
-                # Truncate reason to fit
-                max_reason = 18
-                reason_short = reason[:max_reason] + ".." if len(reason) > max_reason else reason
-                painter.drawText(12, y + 12, f"→ {action} ({score:.0f}) {reason_short}")
+                raw = f"→ {action} ({score:.0f}) {reason}"
+                painter.drawText(12, y + 12, self._trunc(painter, raw, w))
                 y += 20
 
         # === OBJECTIVES (upper/lower pit grouping) ===
         def _fmt_timer(v):
-            """Smart timer format: >120s → 2m+, ≤120s → M:SS"""
-            if v < 0:
+            """Smart timer format: only show within 2 min countdown.
+            ≤120s → M:SS, >120s → None (don't show)"""
+            if v < 0 or v > 120:
                 return None
-            if v > 120:
-                return "2m+"
             m, s = divmod(int(v), 60)
             return f"{m}:{s:02d}"
 
@@ -485,7 +490,8 @@ class OverlayWidgetV2(OverlayWidget):
                 color = _COLORS.get(w.level, QColor(255, 255, 255))
                 painter.setPen(color)
                 icon = _ICONS.get(w.level.value, "?")
-                painter.drawText(12, y + 12, f"{icon} {w.message}")
+                raw = f"{icon} {w.message}"
+                painter.drawText(12, y + 12, self._trunc(painter, raw, w))
                 y += 22
 
         # === LLM ADVICE ===
@@ -493,9 +499,8 @@ class OverlayWidgetV2(OverlayWidget):
         if advice:
             painter.setPen(QColor(120, 220, 120))
             painter.setFont(QFont("Microsoft YaHei", 9))
-            max_chars = 32
-            display = advice[:max_chars] + "..." if len(advice) > max_chars else advice
-            painter.drawText(12, y + 12, f"💬 {display}")
+            raw = f"💬 {advice}"
+            painter.drawText(12, y + 12, self._trunc(painter, raw, w))
             y += 22
 
         painter.end()

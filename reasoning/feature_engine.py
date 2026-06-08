@@ -124,10 +124,11 @@ class FeatureEngine:
     def _extract_skill(det_summary: DetectionSummary) -> SkillFeature:
         """Extract skill readiness from skill detections.
 
-        Only mark skill as ready if detection confidence is high enough.
-        Low confidence detections are likely cooldown/false positives.
+        Default: all skills on CD (False).
+        Only mark ready if YOLO detects the skill icon with high confidence.
+        Skills with countdown numbers overlay = not detected = CD.
         """
-        SKILL_CONFIDENCE_THRESHOLD = 0.6  # Filter unreliable detections
+        SKILL_CONFIDENCE_THRESHOLD = 0.7
         ready = {}
         for skill_state in det_summary.skills:
             if skill_state.confidence < SKILL_CONFIDENCE_THRESHOLD:

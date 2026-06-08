@@ -124,8 +124,11 @@ def _rule_contest_dragon_fight(state, goal, features, memory):
     if features.economy.is_pre_6:
         score -= 10.0
         parts.append("未到6级")
-    elif features.economy.has_ult and features.skill.ult_ready:
-        score += 5.0  # 6级+大招就绪双重加成
+    elif features.economy.level_spike == "spike_6" and features.skill.ult_ready:
+        score += 5.0
+        parts.append("刚到6级")
+    elif features.skill.ult_ready:
+        score += 5.0
 
     # Spawn urgency
     if 0 <= state.dragon_spawn_in <= 30:
@@ -349,9 +352,12 @@ def _rule_group_fight(state, goal, features, memory):
     if features.economy.is_pre_6:
         score -= 15.0
         parts.append("未到6级，不宜团战")
-    elif features.economy.has_ult and features.skill.ult_ready:
+    elif features.economy.level_spike == "spike_6" and features.skill.ult_ready:
         score += 10.0
-        parts.append("6级大招优势")
+        parts.append("刚到6级，大招优势")
+    elif features.skill.ult_ready:
+        score += 10.0
+        parts.append("大招就绪")
 
     if state.combat == "advantage":
         score += 10.0
