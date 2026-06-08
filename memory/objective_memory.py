@@ -1,11 +1,15 @@
 """Objective Memory — tracks neutral objective kill/respawn times.
 
 2025/2026 LOL objective timing:
-- Dragon (Lower Pit): 5:00 first spawn, 5:00 respawn
-- Elder Dragon (Lower Pit): spawns after Dragon Soul, 10:00 respawn
-- Voidgrubs (Upper Pit): 5:00 first spawn
-- Herald (Upper Pit): 15:00 first spawn, 19:30 despawn
-- Baron (Upper Pit): 25:00 first spawn, 6:00 respawn
+
+Lower Pit (Dragon Pit):
+- Dragon: 5:00 first spawn, 5:00 respawn
+- Elder Dragon: spawns after Dragon Soul, 10:00 respawn
+
+Upper Pit (Baron Pit):
+- Voidgrubs: 5:00 first spawn (3 grubs, once per game)
+- Herald: 8:00 spawn (once per game, despawns at 19:30)
+- Baron: 25:00 first spawn, 6:00 respawn
 """
 
 from __future__ import annotations
@@ -17,10 +21,10 @@ from typing import Optional
 # LOL 2025/2026 objective timing constants (seconds)
 DRAGON_FIRST_SPAWN = 300     # 5:00
 DRAGON_RESPAWN = 300         # 5 minutes
-GRUB_FIRST_SPAWN = 300       # 5:00 (updated from 8:00)
-HERALD_FIRST_SPAWN = 900     # 15:00 (updated from 8:00)
-HERALD_DESPAWN = 1170        # 19:30 (updated from 11:00)
-BARON_FIRST_SPAWN = 1500     # 25:00 (updated from 20:00)
+GRUB_FIRST_SPAWN = 300       # 5:00 (once per game, 3 grubs)
+HERALD_FIRST_SPAWN = 480     # 8:00 (once per game)
+HERALD_DESPAWN = 1170        # 19:30
+BARON_FIRST_SPAWN = 1500     # 25:00
 BARON_RESPAWN = 360          # 6 minutes
 ELDER_RESPAWN = 600          # 10 minutes (spawns after Dragon Soul)
 
@@ -106,7 +110,7 @@ class ObjectiveMemory:
         else:
             timers["grub_spawn_in"] = -1.0  # Dead, no respawn
 
-        # Herald (Upper Pit) — 15:00 to 19:30
+        # Herald (Upper Pit) — 8:00 once, despawns 19:30
         rec = self._objectives["herald"]
         if rec.alive:
             if current_time < HERALD_FIRST_SPAWN:
@@ -115,16 +119,9 @@ class ObjectiveMemory:
                 timers["herald_spawn_in"] = 0.0  # Available
             else:
                 timers["herald_spawn_in"] = -1.0  # Past despawn
-        elif rec.last_killed_time is not None:
-            if current_time < HERALD_DESPAWN:
-                timers["herald_spawn_in"] = -1.0  # Dead, no respawn
-            else:
-                timers["herald_spawn_in"] = -1.0
         else:
-            if current_time < HERALD_FIRST_SPAWN:
-                timers["herald_spawn_in"] = HERALD_FIRST_SPAWN - current_time
-            else:
-                timers["herald_spawn_in"] = -1.0
+            # Dead, once per game — no respawn
+            timers["herald_spawn_in"] = -1.0
 
         # Baron (Upper Pit)
         timers["baron_spawn_in"] = self._compute_timer(

@@ -66,7 +66,7 @@ class TestObjectiveMemory:
         timers = mem.get_spawn_timers(current_time=0)
         assert timers["dragon_spawn_in"] == 300   # 5:00
         assert timers["baron_spawn_in"] == 1500    # 25:00
-        assert timers["herald_spawn_in"] == 900    # 15:00
+        assert timers["herald_spawn_in"] == 480    # 8:00
         assert timers["grub_spawn_in"] == 300      # 5:00
         assert timers["elder_spawn_in"] == -1.0    # Not until Dragon Soul
 
@@ -86,17 +86,23 @@ class TestObjectiveMemory:
 
     def test_herald_window(self):
         mem = ObjectiveMemory()
-        # Herald spawns at 15:00 (900s), available until 19:30 (1170s)
-        timers = mem.get_spawn_timers(current_time=900)
-        assert timers["herald_spawn_in"] == 0.0  # Just spawned
+        # Herald spawns at 8:00 (480s), available until 19:30 (1170s)
+        # Before spawn
+        timers = mem.get_spawn_timers(current_time=300)
+        assert timers["herald_spawn_in"] == 180  # 480 - 300 = 180s
 
-        # Before herald spawn
+        # After spawn, available
         timers = mem.get_spawn_timers(current_time=600)
-        assert timers["herald_spawn_in"] == 300  # 900 - 600 = 300s
+        assert timers["herald_spawn_in"] == 0.0  # Available
 
-        # After herald despawn
+        # After despawn
         timers = mem.get_spawn_timers(current_time=1200)
         assert timers["herald_spawn_in"] == -1.0  # Past 19:30
+
+        # Killed — once per game, no respawn
+        mem.record_kill("herald", game_time=600)
+        timers = mem.get_spawn_timers(current_time=700)
+        assert timers["herald_spawn_in"] == -1.0
 
     def test_record_spawn(self):
         mem = ObjectiveMemory()
