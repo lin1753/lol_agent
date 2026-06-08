@@ -120,6 +120,13 @@ def _rule_contest_dragon_fight(state, goal, features, memory):
         score += 5.0
         parts.append("大招就绪")
 
+    # Level spike: 6+ = stronger, pre-6 = weaker in fights
+    if features.economy.is_pre_6:
+        score -= 10.0
+        parts.append("未到6级")
+    elif features.economy.has_ult and features.skill.ult_ready:
+        score += 5.0  # 6级+大招就绪双重加成
+
     # Spawn urgency
     if 0 <= state.dragon_spawn_in <= 30:
         score += 10.0
@@ -338,6 +345,14 @@ def _rule_group_fight(state, goal, features, memory):
     elif hp < -0.2:
         score -= 10.0
 
+    # Level advantage: 6+ with ult is a huge power spike
+    if features.economy.is_pre_6:
+        score -= 15.0
+        parts.append("未到6级，不宜团战")
+    elif features.economy.has_ult and features.skill.ult_ready:
+        score += 10.0
+        parts.append("6级大招优势")
+
     if state.combat == "advantage":
         score += 10.0
 
@@ -369,6 +384,11 @@ def _rule_retreat(state, goal, features, memory):
         score += 5.0
         parts.append("无闪现")
 
+    # Pre-6 without ult = vulnerable, retreat earlier
+    if features.economy.is_pre_6 and state.phase != "early":
+        score += 10.0
+        parts.append("未到6级容易被单杀")
+
     return Decision(action="retreat", score=min(score, 100.0),
                     reason=_reason(parts))
 
@@ -388,7 +408,17 @@ def _rule_farm(state, goal, features, memory):
     if features.wave.wave_strength < 0:
         score += 5.0
 
-    return Decision(action="farm", score=score, reason="安全发育补兵")
+    # Pre-6: farming to reach level 6 is critical
+    if features.economy.is_pre_6:
+        score += 15.0
+        reason = "未到6级，优先发育升6"
+    elif features.economy.level_spike == "spike_6":
+        score += 5.0
+        reason = "刚到6级，可以寻找机会"
+    else:
+        reason = "安全发育补兵"
+
+    return Decision(action="farm", score=score, reason=reason)
 
 
 # ========== Universal rules (always evaluated, no duplicates) ==========
@@ -430,6 +460,17 @@ def _rule_objective_prep(state, goal, features, memory):
     return None
 
 
+def _rule_level_caution(state, goal, features, memory):
+    """Pre-6 caution: avoid fights before ult unlock."""
+    if not features.economy.is_pre_6:
+        return None
+    # Only warn if enemies are nearby (not during safe farming)
+    if features.hero.enemy_count >= 2 and state.phase != "early":
+        return Decision(action="play_safe", score=65.0,
+                        reason=f"等级{features.economy.player_level}未到6级，敌方可能已有大招")
+    return None
+
+
 # ========== Rule registry ==========
 
 _GOAL_RULES: dict[str, list] = {
@@ -448,4 +489,5 @@ _UNIVERSAL_RULES: list = [
     _rule_critical_hp,
     _rule_dangerous_missing,
     _rule_objective_prep,
+    _rule_level_caution,
 ]

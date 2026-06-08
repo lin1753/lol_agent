@@ -95,6 +95,12 @@ class GoalEngine:
             elif state.combat == "disadvantage":
                 score -= 0.15
 
+            # Level spike: 6+ with ult is a huge power spike
+            if features.economy.is_pre_6:
+                score -= 0.2  # Pre-6 = avoid fights
+            elif features.economy.has_ult and features.skill.ult_ready:
+                score += 0.1  # 6级+大招就绪
+
             if score > 0.3:
                 candidates.append(Goal(goal_type="group", confidence=min(score, 1.0)))
 
@@ -108,6 +114,9 @@ class GoalEngine:
             if not features.skill.flash_ready:
                 score += 0.05
             if enemy > ally + 1:
+                score += 0.1
+            # Pre-6 without ult = more vulnerable
+            if features.economy.is_pre_6 and phase != "early":
                 score += 0.1
             candidates.append(Goal(goal_type="retreat", confidence=min(score, 1.0)))
 
@@ -146,7 +155,10 @@ class GoalEngine:
             score = 0.3
             if phase == "early":
                 score = 0.5  # Farming is perfectly fine early
-            candidates.append(Goal(goal_type="farm", confidence=score))
+            # Pre-6: farming to reach level 6 is critical
+            if features.economy.is_pre_6:
+                score += 0.15
+            candidates.append(Goal(goal_type="farm", confidence=min(score, 0.8)))
 
         return max(candidates, key=lambda g: g.confidence)
 
