@@ -122,9 +122,16 @@ class FeatureEngine:
 
     @staticmethod
     def _extract_skill(det_summary: DetectionSummary) -> SkillFeature:
-        """Extract skill readiness from skill detections."""
+        """Extract skill readiness from skill detections.
+
+        Only mark skill as ready if detection confidence is high enough.
+        Low confidence detections are likely cooldown/false positives.
+        """
+        SKILL_CONFIDENCE_THRESHOLD = 0.6  # Filter unreliable detections
         ready = {}
         for skill_state in det_summary.skills:
+            if skill_state.confidence < SKILL_CONFIDENCE_THRESHOLD:
+                continue
             field = _SKILL_MAP.get(skill_state.skill)
             if field:
                 ready[field] = True

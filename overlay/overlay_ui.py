@@ -447,13 +447,23 @@ class OverlayWidgetV2(OverlayWidget):
             if t:
                 lower_parts.append(f"{label} {t}")
 
-        # Upper Pit (Baron Pit): grub, herald, baron
+        # Upper Pit (Baron Pit): grub, herald (once per game), baron
         upper_parts = []
-        for key, label in [("grub_spawn_in", "虫"), ("herald_spawn_in", "先锋"), ("baron_spawn_in", "男爵")]:
-            v = si.get(key, -1)
-            t = _fmt_timer(v)
-            if t:
-                upper_parts.append(f"{label} {t}")
+        # Grub: only show if alive (once per game)
+        grub_v = si.get("grub_spawn_in", -1)
+        grub_t = _fmt_timer(grub_v)
+        if grub_t and grub_v >= 0:
+            upper_parts.append(f"虫 {grub_t}")
+        # Herald: only show if alive (once per game)
+        herald_v = si.get("herald_spawn_in", -1)
+        herald_t = _fmt_timer(herald_v)
+        if herald_t and herald_v >= 0:
+            upper_parts.append(f"先锋 {herald_t}")
+        # Baron: always show if timer valid
+        baron_v = si.get("baron_spawn_in", -1)
+        baron_t = _fmt_timer(baron_v)
+        if baron_t:
+            upper_parts.append(f"男爵 {baron_t}")
 
         if lower_parts or upper_parts:
             divider()

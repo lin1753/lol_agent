@@ -285,6 +285,11 @@ class LolAgent:
                         if g is not None and g > 0:
                             ocr_values["gold"] = str(int(g))
                             self._cached_ocr["gold"] = str(int(g))
+                    if "player_level" in ocr_crops:
+                        lv = self._ocr.recognize_number(ocr_crops["player_level"])
+                        if lv is not None and 1 <= lv <= 18:
+                            ocr_values["level"] = str(int(lv))
+                            self._cached_ocr["level"] = str(int(lv))
 
                 # 5. V2 pipeline: FeatureEngine → Context → Goal → Decision
                 if self._v2 and self._feature_engine:
@@ -297,7 +302,7 @@ class LolAgent:
                     if self._debug and frame_count % 30 == 0:
                         print(f"  [DEBUG] ocr_values={ocr_values}")
                         print(f"  [DEBUG] YOLO dets={len(yolo_dets)} | OCR regions={list(det_summary.ocr_regions.keys())}")
-                        print(f"  [DEBUG] skills={[s.skill for s in det_summary.skills]}")
+                        print(f"  [DEBUG] skills={[f'{s.skill}({s.confidence:.2f})' for s in det_summary.skills]}")
                         print(f"  [DEBUG] hp_bars: ally={len(det_summary.ally_hp_bars)} enemy={len(det_summary.enemy_hp_bars)}")
                         print(f"  [DEBUG] minions: blue={det_summary.blue_minions} red={det_summary.red_minions}")
                         print(f"  [DEBUG] objectives={det_summary.objectives}")
