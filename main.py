@@ -216,6 +216,7 @@ class LolAgent:
         frame_index = 0  # Video frame counter for game time calculation
         fps_timer = time.time()
         fps_display = 0.0
+        loop_start_time = time.time()  # For live mode elapsed time fallback
 
         print("Press Ctrl+C to stop.\n")
 
@@ -264,10 +265,18 @@ class LolAgent:
                         ocr_values["time"] = f"{int(game_seconds // 60)}:{int(game_seconds % 60):02d}"
                         self._cached_ocr["time"] = ocr_values["time"]
                         frame_index += 1
+                else:
+                    # Live mode: elapsed time as fallback (inaccurate but shows something)
+                    if "time" not in self._cached_ocr:
+                        elapsed = time.time() - loop_start_time
+                        ocr_values["time"] = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
 
-                # OCR: only gold + kda, every 60 frames (~2s at 30fps)
-                if self._ocr and self._ocr._ready and frame_count % 60 == 0:
+                # OCR: every 15 frames in live mode, every 60 in video mode
+                ocr_interval = 15 if not self._video_cap else 60
+                if self._ocr and self._ocr._ready and frame_count % ocr_interval == 0:
                     ocr_crops = extract_ocr_regions(frame, det_summary, scale=4)
+                    if self._debug:
+                        print(f"  [DEBUG] OCR crops: {list(ocr_crops.keys())}")
                     if "game_time" in ocr_crops and not self._video_cap:
                         # Real-time mode: OCR game_time (not video)
                         t = self._ocr.recognize_time(ocr_crops["game_time"])
@@ -299,8 +308,9 @@ class LolAgent:
                     )
 
                     # Debug: show OCR and detection data
-                    if self._debug and frame_count % 30 == 0:
-                        print(f"  [DEBUG] ocr_values={ocr_values}")
+                    if self._debug and frame_count % 15 == 0:
+                        ocr_status = "ready" if (self._ocr and self._ocr._ready) else "NOT READY"
+                        print(f"  [DEBUG] OCR: {ocr_status} | frame={frame.shape[:2]} | ocr_values={ocr_values}")
                         print(f"  [DEBUG] YOLO dets={len(yolo_dets)} | OCR regions={list(det_summary.ocr_regions.keys())}")
                         print(f"  [DEBUG] skills={[f'{s.skill}({s.confidence:.2f})' for s in det_summary.skills]}")
                         print(f"  [DEBUG] hp_bars: ally={len(det_summary.ally_hp_bars)} enemy={len(det_summary.enemy_hp_bars)}")
