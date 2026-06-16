@@ -51,15 +51,11 @@ class TestLlmEngine:
             Decision(action="a1", score=90, reason="r1"),
             Decision(action="a2", score=80, reason="r2"),
             Decision(action="a3", score=70, reason="r3"),
-            Decision(action="a4", score=60, reason="r4"),
-            Decision(action="a5", score=50, reason="r5"),
         ]
         prompt = LlmEngine._build_prompt(state, goal, decisions)
-        assert "a1" in prompt
-        assert "a2" in prompt
-        assert "a3" in prompt
-        assert "a4" not in prompt  # Only top 3
-        assert "a5" not in prompt
+        assert "a1" in prompt  # Top 1 shown
+        assert "r1" in prompt
+        assert "a2" not in prompt  # Only top 1 in new format
 
     def test_should_advise_on_goal_change(self, engine):
         state = GameStateV2()
@@ -100,10 +96,10 @@ class TestLlmEngine:
         decisions = [Decision(action="retreat", score=85, reason="劣势后撤")]
         prompt = LlmEngine._build_prompt(state, goal, decisions)
 
-        # Extract JSON from prompt
+        # New format: state JSON at top level, goal/action in plain text
         json_start = prompt.find("{")
         json_end = prompt.rfind("}") + 1
         json_str = prompt[json_start:json_end]
         data = json.loads(json_str)
-        assert data["state"]["phase"] == "late"
-        assert data["goal"]["goal_type"] == "retreat"
+        assert data["phase"] == "late"
+        assert "retreat" in prompt  # goal and action in prompt text

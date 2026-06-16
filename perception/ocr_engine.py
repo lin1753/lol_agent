@@ -172,10 +172,23 @@ class OcrEngine:
             self._ready = False
             self.start()
 
-        import threading
-        # Unique temp file per call to avoid conflicts
-        tmp_path = Path(tempfile.gettempdir()) / f"lol_ocr_{id(image) & 0xFFFF:04x}.png"
-        cv2.imwrite(str(tmp_path), image)
+        # Ensure image is valid and contiguous
+        if image is None or image.size == 0:
+            return []
+        if not image.flags["C_CONTIGUOUS"]:
+            image = np.ascontiguousarray(image)
+
+        # Use unique temp file with UUID to avoid collisions
+        import uuid
+        tmp_path = Path(tempfile.gettempdir()) / f"lol_ocr_{uuid.uuid4().hex[:8]}.png"
+        try:
+            ok = cv2.imwrite(str(tmp_path), image)
+            if not ok:
+                print(f"OCR warn: cv2.imwrite failed for {tmp_path}")
+                return []
+        except Exception as e:
+            print(f"OCR warn: cv2.imwrite exception: {e}")
+            return []
 
         try:
             self._process.stdin.write(f"OCR {tmp_path}\n")

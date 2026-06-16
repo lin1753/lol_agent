@@ -60,6 +60,7 @@ class LolAgent:
         enable_overlay: bool = True,
         enable_voice: bool = True,
         monitor: int | str = "auto",
+        window_title: str | None = None,
         fps_target: float = 5.0,
         v2: bool = False,
         enable_llm: bool = False,
@@ -91,7 +92,13 @@ class LolAgent:
                 print(f"  Video: {video_path} ({w}x{h}, {fps:.1f}fps, {total} frames)")
         else:
             self._capture = ScreenCapture()
-            if monitor == "auto":
+            if window_title:
+                if self._capture.find_window(window_title):
+                    print(f"  Screen: found window '{window_title}'")
+                else:
+                    print(f"  Screen: window '{window_title}' not found, using primary monitor")
+                    self._capture = ScreenCapture(monitor=1)
+            elif monitor == "auto":
                 if self._capture.set_lol_window():
                     print("  Screen: LOL window detected")
                 else:
@@ -100,8 +107,12 @@ class LolAgent:
             else:
                 self._capture = ScreenCapture(monitor=int(monitor))
 
-        # ROI Manager
-        self._roi = ROIManager(config_path=Path(__file__).parent / "configs" / "roi_config.json")
+        # ROI Manager — use live config for screen capture, replay config for video files
+        if video_path:
+            roi_path = Path(__file__).parent / "configs" / "roi_config.json"
+        else:
+            roi_path = Path(__file__).parent / "configs" / "roi_config_live.json"
+        self._roi = ROIManager(config_path=roi_path)
         print(f"  ROI: {self._roi.region_names}")
 
         # Minimap Parser (OpenCV-based, no model needed)
@@ -122,7 +133,8 @@ class LolAgent:
         # OCR Engine (subprocess-isolated PaddleOCR)
         self._ocr: OcrEngine | None = None
         try:
-            self._ocr = OcrEngine(lang="ch", use_gpu=use_gpu)
+            # OCR always uses CPU — subprocess PaddlePaddle CUDA conflicts with PyTorch CUDA on Windows
+            self._ocr = OcrEngine(lang="ch", use_gpu=False)
             print("  OCR: starting subprocess...", flush=True)
             if self._ocr.start():
                 print("  OCR: PaddleOCR subprocess ready", flush=True)
@@ -156,7 +168,7 @@ class LolAgent:
         self._llm_engine = None
         if v2 and enable_llm:
             from reasoning.llm_engine import LlmEngine
-            self._llm_engine = LlmEngine()
+            self._llm_engine = LlmEngine(model_path=r"C:\Users\XJL\.cache\modelscope\hub\models\Qwen\Qwen3-0___6B")
             if not self._llm_engine.start():
                 self._llm_engine = None
                 print("  LLM: disabled (failed to load)")
@@ -550,6 +562,7 @@ def main() -> None:
     parser.add_argument("--no-overlay", action="store_true", help="Disable overlay")
     parser.add_argument("--no-voice", action="store_true", help="Disable TTS")
     parser.add_argument("--monitor", default="auto", help="Monitor index or 'auto'")
+    parser.add_argument("--window", type=str, default=None, help="Window title to capture (e.g. 'Bilibili' or a browser tab)")
     parser.add_argument("--fps", type=float, default=5.0, help="Target FPS")
     parser.add_argument("--cpu", action="store_true", help="Force CPU mode")
     parser.add_argument("--v2", action="store_true", help="Use V2 pipeline (FeatureEngine)")
@@ -564,6 +577,7 @@ def main() -> None:
         enable_overlay=not args.no_overlay,
         enable_voice=not args.no_voice,
         monitor=args.monitor,
+        window_title=args.window,
         fps_target=args.fps,
         v2=args.v2,
         enable_llm=args.llm,

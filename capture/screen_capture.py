@@ -53,8 +53,15 @@ class ScreenCapture:
 
         Returns True if the LOL window was found.
         """
+        return self.find_window("League of Legends")
+
+    def find_window(self, title: str) -> bool:
+        """Find a window by title (partial match) and set capture region.
+
+        Returns True if the window was found.
+        """
         try:
-            hwnd = ctypes.windll.user32.FindWindowW(None, "League of Legends")
+            hwnd = ctypes.windll.user32.FindWindowW(None, title)
             if hwnd == 0:
                 return False
             rect = ctypes.wintypes.RECT()

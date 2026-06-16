@@ -1,0 +1,53 @@
+names:
+  0: minimap_fov
+  1: chat_box
+  2: blue_kills
+  3: kda
+  4: cs_count
+  5: game_time
+  6: green_hp_hero
+  7: blue_hp_hero
+  8: red_hp_hero
+  9: red_minion
+  10: red_cannon
+  11: blue_minion
+  12: blue_cannon
+  13: blue_tower
+  14: red_tower
+  15: green_hp_bar
+  16: blue_hp_bar
+  17: red_hp_bar
+  18: jg_blue_buff
+  19: jg_rock
+  20: jg_raptor
+  21: jg_red_buff
+  22: jg_wolf
+  23: jg_frog
+  24: jg_crab
+  25: baron
+  26: herald
+  27: void_grub
+  28: dragon
+  29: minimap
+  30: ally_hero_icon
+  31: enemy_hero_icon
+  32: passive_skill
+  33: q_skill
+  34: w_skill
+  35: e_skill
+  36: r_skill
+  37: d_skill
+  38: f_skill
+  39: item
+  40: gold
+  41: player_hp_bar
+  42: player_level
+  43: game_cursor
+  44: blue_control_ward
+  45: blue_ward
+  46: red_control_ward
+  47: red_ward
+nc: 48
+path: D:\Project\lol_agent\data\yolo_dataset
+train: images/train
+val: images/val

@@ -17,16 +17,19 @@ from schemas.goal import Goal
 from schemas.state import GameStateV2
 
 
-_SYSTEM_PROMPT = """你是 LOL（英雄联盟）战术助手。根据以下结构化游戏状态，给出 2-3 句简短的中文建议。
-要求：
-- 直接给出建议，不要重复状态信息
-- 语气简洁有力，适合实时提醒
-- 如果有明确目标，围绕目标给建议"""
+_SYSTEM_PROMPT = """你是 LOL 战术助手。根据游戏状态 JSON，用中文给出 1-2 句战术建议。
+规则：
+1. 直接给建议，不重复状态
+2. 围绕当前目标说
+3. 60字以内"""
 
-_USER_TEMPLATE = """当前游戏状态：
+_USER_TEMPLATE = """游戏状态：
 {state_json}
 
-请给出战术建议。"""
+当前目标：{goal_type}（置信度 {confidence}）
+首选行动：{action}（{reason}）
+
+给出战术建议："""
 
 
 class LlmEngine:
@@ -42,7 +45,7 @@ class LlmEngine:
 
     def __init__(
         self,
-        model_path: str = "Qwen/Qwen3-8B",
+        model_path: str = "Qwen/Qwen3-0.6B",
         quantize: bool = True,
         device: str = "auto",
         max_new_tokens: int = 150,
@@ -70,7 +73,7 @@ class LlmEngine:
             tok_kwargs = {"trust_remote_code": True}
             model_kwargs = {"trust_remote_code": True, "device_map": self._device}
 
-            if self._quantize:
+            if self._quantize and "8B" in self._model_path:
                 bnb_config = BitsAndBytesConfig(
                     load_in_4bit=True,
                     bnb_4bit_compute_dtype=torch.float16,
@@ -137,7 +140,8 @@ class LlmEngine:
                 {"role": "user", "content": prompt},
             ]
             text = self._tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
+                messages, tokenize=False, add_generation_prompt=True,
+                enable_thinking=False,
             )
             inputs = self._tokenizer(text, return_tensors="pt").to(self._model.device)
 
@@ -183,13 +187,11 @@ class LlmEngine:
             "threat": state.threat,
             "game_time": f"{int(state.game_time // 60)}:{int(state.game_time % 60):02d}",
         }
-        goal_dict = {
-            "goal_type": goal.goal_type,
-            "confidence": round(goal.confidence, 2),
-        }
-        dec_list = [
-            {"action": d.action, "score": d.score, "reason": d.reason}
-            for d in decisions[:3]  # Top 3
-        ]
-        data = {"state": state_dict, "goal": goal_dict, "decisions": dec_list}
-        return _USER_TEMPLATE.format(state_json=json.dumps(data, ensure_ascii=False, indent=2))
+        top = decisions[0] if decisions else None
+        return _USER_TEMPLATE.format(
+            state_json=json.dumps(state_dict, ensure_ascii=False, indent=2),
+            goal_type=goal.goal_type,
+            confidence=round(goal.confidence, 2),
+            action=top.action if top else "无",
+            reason=top.reason if top else "无",
+        )
