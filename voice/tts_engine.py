@@ -8,9 +8,7 @@ import queue
 import tempfile
 import threading
 import time
-from typing import List, Optional
-
-from reasoning.rule_engine import Warning, WarningLevel
+from typing import Optional
 
 try:
     import edge_tts
@@ -45,13 +43,11 @@ class TtsEngine:
         rate: str = "+10%",
         volume: float = 0.9,
         dedup_seconds: float = 10.0,
-        min_level: WarningLevel = WarningLevel.WARN,
     ) -> None:
         self._voice = voice
         self._rate = rate
         self._volume = volume
         self._dedup_seconds = dedup_seconds
-        self._min_level = min_level
 
         self._queue: queue.Queue[str] = queue.Queue()
         self._dedup_map: dict[str, float] = {}  # message -> last_spoken_time
@@ -106,23 +102,6 @@ class TtsEngine:
         self.speak(message)
         return True
 
-    def speak_warnings(self, warnings: List[Warning]) -> None:
-        """Speak warnings that meet the minimum level threshold.
-
-        Args:
-            warnings: List of Warning objects from RuleEngine.
-        """
-        level_order = {
-            WarningLevel.INFO: 0,
-            WarningLevel.WARN: 1,
-            WarningLevel.DANGER: 2,
-        }
-        min_priority = level_order.get(self._min_level, 1)
-
-        for w in warnings:
-            if level_order.get(w.level, 0) >= min_priority:
-                self.speak_if_new(w.message)
-
     def clear_dedup(self) -> None:
         """Clear the deduplication cache."""
         self._dedup_map.clear()
@@ -133,6 +112,8 @@ class TtsEngine:
 
     def _worker(self) -> None:
         """Background worker that processes the speech queue."""
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
         while self._running:
             try:
                 message = self._queue.get(timeout=0.5)
@@ -140,8 +121,8 @@ class TtsEngine:
                 continue
 
             self._speak_blocking(message)
-            # Small delay between utterances
             time.sleep(0.2)
+        self._loop.close()
 
     def _speak_blocking(self, message: str) -> None:
         """Speak a single message (blocking)."""
@@ -157,7 +138,7 @@ class TtsEngine:
             # Generate audio to temp file
             tmp_path = os.path.join(tempfile.gettempdir(), "lol_tts_output.mp3")
             communicate = edge_tts.Communicate(message, self._voice, rate=self._rate)
-            asyncio.run(self._edge_tts_generate(communicate, tmp_path))
+            self._loop.run_until_complete(self._edge_tts_generate(communicate, tmp_path))
 
             # Play audio
             if HAS_PYGAME and os.path.exists(tmp_path):

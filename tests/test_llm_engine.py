@@ -34,7 +34,7 @@ class TestLlmEngine:
         goal = Goal(goal_type="contest_dragon", confidence=0.91)
         decisions = [
             Decision(action="contest_dragon", score=95.0, reason="人数优势"),
-            Decision(action="push_mid", score=65.0, reason="兵线推进"),
+            Decision(action="push_lane_pressure", score=65.0, reason="兵线推进"),
         ]
         prompt = LlmEngine._build_prompt(state, goal, decisions)
 
@@ -48,18 +48,18 @@ class TestLlmEngine:
         state = GameStateV2()
         goal = Goal()
         decisions = [
-            Decision(action="a1", score=90, reason="r1"),
-            Decision(action="a2", score=80, reason="r2"),
-            Decision(action="a3", score=70, reason="r3"),
+            Decision(action="contest_dragon", score=90, reason="r1"),
+            Decision(action="push_tower", score=80, reason="r2"),
+            Decision(action="farm", score=70, reason="r3"),
         ]
         prompt = LlmEngine._build_prompt(state, goal, decisions)
-        assert "a1" in prompt  # Top 1 shown
+        assert "contest_dragon" in prompt  # Top 1 shown
         assert "r1" in prompt
-        assert "a2" not in prompt  # Only top 1 in new format
+        assert "push_tower" not in prompt  # Only top 1 in new format
 
     def test_should_advise_on_goal_change(self, engine):
         state = GameStateV2()
-        goal1 = Goal(goal_type="reset")
+        goal1 = Goal(goal_type="farm")
         goal2 = Goal(goal_type="contest_dragon")
 
         # First call with goal1
@@ -75,8 +75,8 @@ class TestLlmEngine:
 
     def test_should_advise_on_interval(self, engine):
         state = GameStateV2()
-        goal = Goal(goal_type="reset")
-        engine._last_goal = "reset"
+        goal = Goal(goal_type="farm")
+        engine._last_goal = "farm"
         engine._last_advise_time = 0  # long ago
 
         assert engine.should_advise(state, goal) is True

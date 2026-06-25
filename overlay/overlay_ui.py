@@ -10,14 +10,12 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtGui import QColor, QFont, QPainter, QPainterPath
 from PyQt5.QtWidgets import QApplication, QWidget
 
-from reasoning.rule_engine import Warning, WarningLevel
 
-
-_COLORS = {
-    WarningLevel.INFO: QColor(100, 180, 255),
-    WarningLevel.WARN: QColor(255, 200, 50),
-    WarningLevel.DANGER: QColor(255, 80, 80),
-    WarningLevel.SUGGEST: QColor(120, 220, 120),
+_WARNING_COLORS = {
+    "info": QColor(100, 180, 255),
+    "warn": QColor(255, 200, 50),
+    "danger": QColor(255, 80, 80),
+    "suggest": QColor(120, 220, 120),
 }
 
 _ICONS = {
@@ -63,7 +61,7 @@ class OverlayWidget(QWidget):
         self._y = y
         self._width = width
         self._state_info: dict = {}
-        self._warnings: List[Warning] = []
+        self._warnings: list[dict] = []
         self._drag_pos = None
         self._setup_window()
 
@@ -93,7 +91,7 @@ class OverlayWidget(QWidget):
         self._auto_resize()
         self.update()
 
-    def set_warnings(self, warnings: List[Warning]) -> None:
+    def set_warnings(self, warnings: list[dict]) -> None:
         self._warnings = list(warnings)
         self._auto_resize()
         self.update()
@@ -148,10 +146,10 @@ class OverlayWidget(QWidget):
         # Warnings (max 5 visible)
         painter.setFont(QFont("Microsoft YaHei", 10))
         for w in self._warnings[:5]:
-            color = _COLORS.get(w.level, QColor(255, 255, 255))
+            color = _WARNING_COLORS.get(w.get("level", "info"), QColor(255, 255, 255))
             painter.setPen(color)
-            icon = _ICONS.get(w.level.value, "?")
-            painter.drawText(12, y + 12, f"{icon} {w.message}")
+            icon = _ICONS.get(w.get("level", "info"), "?")
+            painter.drawText(12, y + 12, f"{icon} {w.get('message', '')}")
             y += 28
 
         painter.end()
@@ -188,7 +186,7 @@ class OverlayWidget(QWidget):
 
         # Objectives — only show when close to spawn (within 120s)
         obj_parts = []
-        for key, label in [("dragon_spawn_in", "小龙"), ("baron_spawn_in", "男筠"), ("herald_spawn_in", "先锋")]:
+        for key, label in [("dragon_spawn_in", "小龙"), ("baron_spawn_in", "男爵"), ("herald_spawn_in", "先锋")]:
             v = self._state_info.get(key, -1)
             if 0 <= v <= 120:
                 obj_parts.append(f"{label}: {int(v)}s")
@@ -513,10 +511,10 @@ class OverlayWidgetV2(OverlayWidget):
             divider()
             painter.setFont(QFont("Microsoft YaHei", 9))
             for warn in self._warnings[:5]:
-                color = _COLORS.get(warn.level, QColor(255, 255, 255))
+                color = _WARNING_COLORS.get(warn.get("level", "info"), QColor(255, 255, 255))
                 painter.setPen(color)
-                icon = _ICONS.get(warn.level.value, "?")
-                raw = f"{icon} {warn.message}"
+                icon = _ICONS.get(warn.get("level", "info"), "?")
+                raw = f"{icon} {warn.get('message', '')}"
                 h = self._draw_wrapped(painter, 12, y, raw, w, 22)
                 y += h
 
@@ -577,7 +575,7 @@ class OverlayUI:
         if self._signals:
             self._signals.state_updated.emit(state_info)
 
-    def update_warnings(self, warnings: List[Warning]) -> None:
+    def update_warnings(self, warnings: list[dict]) -> None:
         if self._signals:
             self._signals.warnings_updated.emit(warnings)
 

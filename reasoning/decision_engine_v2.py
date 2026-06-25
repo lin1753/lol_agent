@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import List
 
-from memory.temporal_memory import TemporalMemory
 from schemas.decision import Decision
 from schemas.feature_bundle import FeatureBundle
 from schemas.goal import Goal
@@ -32,7 +31,7 @@ class DecisionEngineV2:
 
     Usage:
         engine = DecisionEngineV2()
-        decisions = engine.evaluate(state, goal, features, memory)
+        decisions = engine.evaluate(state, goal, features)
     """
 
     def evaluate(
@@ -40,7 +39,6 @@ class DecisionEngineV2:
         state: GameStateV2,
         goal: Goal,
         features: FeatureBundle,
-        memory: TemporalMemory,
     ) -> List[Decision]:
         """Produce ranked candidate decisions."""
         decisions: List[Decision] = []
@@ -48,13 +46,13 @@ class DecisionEngineV2:
         # Goal-specific rules (each goal has multiple candidates)
         goal_rules = _GOAL_RULES.get(goal.goal_type, [])
         for rule_fn in goal_rules:
-            d = rule_fn(state, goal, features, memory)
+            d = rule_fn(state, goal, features)
             if d is not None:
                 decisions.append(d)
 
         # Universal rules (fill gaps, don't duplicate)
         for rule_fn in _UNIVERSAL_RULES:
-            d = rule_fn(state, goal, features, memory)
+            d = rule_fn(state, goal, features)
             if d is not None:
                 decisions.append(d)
 
@@ -82,7 +80,7 @@ def _reason(parts: list[str]) -> str:
 
 
 # --- Contest Dragon ---
-def _rule_contest_dragon_fight(state, goal, features, memory):
+def _rule_contest_dragon_fight(state, goal, features):
     """Primary: fight for dragon."""
     if not features.objective.dragon_alive:
         return None
@@ -138,7 +136,7 @@ def _rule_contest_dragon_fight(state, goal, features, memory):
                     reason=_reason(parts))
 
 
-def _rule_contest_dragon_vision(state, goal, features, memory):
+def _rule_contest_dragon_vision(state, goal, features):
     """Secondary: prepare vision for dragon."""
     if not features.objective.dragon_alive:
         return None
@@ -149,7 +147,7 @@ def _rule_contest_dragon_vision(state, goal, features, memory):
                     reason=f"小龙{int(state.dragon_spawn_in)}s后刷新，提前布控视野")
 
 
-def _rule_contest_dragon_pressure(state, goal, features, memory):
+def _rule_contest_dragon_pressure(state, goal, features):
     """Tertiary: push lane to create pressure while dragon spawns."""
     if not features.objective.dragon_alive:
         return None
@@ -163,7 +161,7 @@ def _rule_contest_dragon_pressure(state, goal, features, memory):
 
 
 # --- Contest Baron ---
-def _rule_contest_baron_fight(state, goal, features, memory):
+def _rule_contest_baron_fight(state, goal, features):
     """Primary: fight for baron."""
     if not features.objective.baron_alive:
         return None
@@ -206,7 +204,7 @@ def _rule_contest_baron_fight(state, goal, features, memory):
                     reason=_reason(parts))
 
 
-def _rule_contest_baron_sneak(state, goal, features, memory):
+def _rule_contest_baron_sneak(state, goal, features):
     """Sneak baron if enemies are far away."""
     if not features.objective.baron_alive:
         return None
@@ -224,7 +222,7 @@ def _rule_contest_baron_sneak(state, goal, features, memory):
 
 
 # --- Contest Herald ---
-def _rule_contest_herald(state, goal, features, memory):
+def _rule_contest_herald(state, goal, features):
     """Take herald."""
     if not features.objective.herald_alive:
         return None
@@ -249,7 +247,7 @@ def _rule_contest_herald(state, goal, features, memory):
 
 
 # --- Push Tower ---
-def _rule_push_tower(state, goal, features, memory):
+def _rule_push_tower(state, goal, features):
     """Push tower with wave advantage."""
     wave = features.wave.wave_strength
     if wave <= 0:
@@ -269,7 +267,7 @@ def _rule_push_tower(state, goal, features, memory):
                     reason=_reason(parts))
 
 
-def _rule_push_tower_plates(state, goal, features, memory):
+def _rule_push_tower_plates(state, goal, features):
     """Push for tower plates (early game)."""
     if state.phase != "early":
         return None
@@ -283,7 +281,7 @@ def _rule_push_tower_plates(state, goal, features, memory):
 
 
 # --- Defend Tower ---
-def _rule_defend_tower(state, goal, features, memory):
+def _rule_defend_tower(state, goal, features):
     """Defend against enemy push."""
     if features.wave.enemy_minions < 2:
         return None
@@ -301,7 +299,7 @@ def _rule_defend_tower(state, goal, features, memory):
 
 
 # --- Split Push ---
-def _rule_split_push(state, goal, features, memory):
+def _rule_split_push(state, goal, features):
     """Split push on side lane."""
     if state.phase == "early":
         return None
@@ -321,7 +319,7 @@ def _rule_split_push(state, goal, features, memory):
 
 
 # --- Group ---
-def _rule_group_fight(state, goal, features, memory):
+def _rule_group_fight(state, goal, features):
     """Group for teamfight."""
     ally, enemy = features.hero.ally_count, features.hero.enemy_count
     if ally < 2:
@@ -367,7 +365,7 @@ def _rule_group_fight(state, goal, features, memory):
 
 
 # --- Retreat ---
-def _rule_retreat(state, goal, features, memory):
+def _rule_retreat(state, goal, features):
     """Retreat from danger."""
     hp = features.hero.hp_ratio
     ally, enemy = features.hero.ally_count, features.hero.enemy_count
@@ -400,7 +398,7 @@ def _rule_retreat(state, goal, features, memory):
 
 
 # --- Farm (default) ---
-def _rule_farm(state, goal, features, memory):
+def _rule_farm(state, goal, features):
     """Farm/safe laning."""
     score = 35.0
     if state.phase == "early":
@@ -430,7 +428,7 @@ def _rule_farm(state, goal, features, memory):
 # ========== Universal rules (always evaluated, no duplicates) ==========
 
 
-def _rule_critical_hp(state, goal, features, memory):
+def _rule_critical_hp(state, goal, features):
     """Critical HP: must recall regardless of goal."""
     hp = features.hero.hp_ratio
     if hp < -0.5:  # Very bad HP
@@ -439,7 +437,7 @@ def _rule_critical_hp(state, goal, features, memory):
     return None
 
 
-def _rule_dangerous_missing(state, goal, features, memory):
+def _rule_dangerous_missing(state, goal, features):
     """Many enemies missing = high risk."""
     missing = features.map.enemy_missing
     if missing >= 4:
@@ -451,7 +449,7 @@ def _rule_dangerous_missing(state, goal, features, memory):
     return None
 
 
-def _rule_objective_prep(state, goal, features, memory):
+def _rule_objective_prep(state, goal, features):
     """Objective spawning soon → prepare."""
     if (features.objective.dragon_alive
             and 0 <= state.dragon_spawn_in <= 45
@@ -466,7 +464,7 @@ def _rule_objective_prep(state, goal, features, memory):
     return None
 
 
-def _rule_level_caution(state, goal, features, memory):
+def _rule_level_caution(state, goal, features):
     """Pre-6 caution: avoid fights before ult unlock."""
     if not features.economy.is_pre_6:
         return None

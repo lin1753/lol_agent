@@ -17,12 +17,9 @@ from schemas.map import MapFeature
 from schemas.objective import ObjectiveFeature
 from schemas.skill import SkillFeature
 from schemas.wave import WaveFeature
+from utils.parsing import parse_kda, parse_int
+from utils.map import classify_lane
 
-
-# Minimap Y thresholds for lane classification (normalized to 0-1 range)
-# Minimap is roughly 240x240 in the standard 1920x1080 layout
-_LANE_Y_TOP_MAX = 0.33
-_LANE_Y_BOT_MIN = 0.66
 
 # Skill class name to field mapping
 _SKILL_MAP = {
@@ -108,9 +105,9 @@ class FeatureEngine:
     @staticmethod
     def _extract_economy(ocr_results: dict[str, str]) -> EconomyFeature:
         """Extract economy features from OCR results."""
-        kills, deaths, assists = _parse_kda(ocr_results.get("kda", ""))
-        gold = _parse_int(ocr_results.get("gold", "0"))
-        level = _parse_int(ocr_results.get("level", "1"))
+        kills, deaths, assists = parse_kda(ocr_results.get("kda", ""))
+        gold = parse_int(ocr_results.get("gold", "0"))
+        level = parse_int(ocr_results.get("level", "1"))
 
         return EconomyFeature(
             player_level=max(1, level),
@@ -172,14 +169,15 @@ class FeatureEngine:
         for det in minimap_detections:
             if det.team != "enemy":
                 continue
-            # Normalize Y to 0-1 range
+            x_norm = det.x / mw if mw > 0 else 0.5
             y_norm = det.y / mh if mh > 0 else 0.5
-            if y_norm < _LANE_Y_TOP_MAX:
+            lane = classify_lane(x_norm, y_norm)
+            if lane == "top":
                 enemy_top += 1
-            elif y_norm > _LANE_Y_BOT_MIN:
-                enemy_bot += 1
-            else:
+            elif lane == "mid":
                 enemy_mid += 1
+            elif lane == "bot":
+                enemy_bot += 1
 
         # Missing = enemies not on minimap (requires hero count from HP bars, default 5)
         visible_enemy = enemy_top + enemy_mid + enemy_bot
@@ -192,26 +190,3 @@ class FeatureEngine:
             enemy_missing=enemy_missing,
         )
 
-
-# --- Helper functions (same as StateParser) ---
-
-
-def _parse_kda(kda_str: str) -> tuple[int, int, int]:
-    """Parse K/D/A string."""
-    if not kda_str:
-        return (0, 0, 0)
-    parts = kda_str.replace(" ", "").split("/")
-    if len(parts) == 3:
-        try:
-            return (int(parts[0]), int(parts[1]), int(parts[2]))
-        except ValueError:
-            return (0, 0, 0)
-    return (0, 0, 0)
-
-
-def _parse_int(s: str) -> int:
-    """Parse integer from string, default 0."""
-    try:
-        return int(s.replace(",", "").replace(" ", ""))
-    except (ValueError, AttributeError):
-        return 0

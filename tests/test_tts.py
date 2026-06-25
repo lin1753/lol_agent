@@ -1,10 +1,5 @@
 """Tests for TTS Engine."""
 
-import time
-
-import pytest
-
-from reasoning.rule_engine import Warning, WarningLevel
 from voice.tts_engine import TtsEngine
 
 
@@ -34,27 +29,3 @@ class TestTtsEngine:
         engine.speak_if_new("测试")
         engine.clear_dedup()
         assert engine.speak_if_new("测试") is True
-
-    def test_speak_warnings_filters_by_level(self):
-        engine = TtsEngine(min_level=WarningLevel.WARN)
-        warnings = [
-            Warning(level=WarningLevel.INFO, message="info消息", rule_name="r1", category="threat"),
-            Warning(level=WarningLevel.WARN, message="warn消息", rule_name="r2", category="threat"),
-            Warning(level=WarningLevel.DANGER, message="danger消息", rule_name="r3", category="threat"),
-        ]
-        engine.speak_warnings(warnings)
-        # info should be filtered, warn and danger should be queued
-        # Check dedup map to verify
-        assert "info消息" not in engine._dedup_map
-        assert "warn消息" in engine._dedup_map
-        assert "danger消息" in engine._dedup_map
-
-    def test_speak_warnings_dedup(self):
-        engine = TtsEngine(min_level=WarningLevel.INFO, dedup_seconds=10.0)
-        warnings = [
-            Warning(level=WarningLevel.WARN, message="重复消息", rule_name="r1", category="threat"),
-        ]
-        engine.speak_warnings(warnings)
-        engine.speak_warnings(warnings)  # second call, same message
-        # Should only be in dedup map once (second call blocked)
-        assert "重复消息" in engine._dedup_map

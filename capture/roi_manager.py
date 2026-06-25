@@ -49,6 +49,8 @@ class ROIManager:
             self._regions = self._load_config(config_path)
         else:
             self._regions = dict(self.DEFAULT_REGIONS)
+        self._scaled_cache: dict[str, tuple[int, int, int, int]] = {}
+        self._cached_frame_size: tuple[int, int] = (0, 0)
 
     @staticmethod
     def _load_config(path: str | Path) -> Dict[str, Region]:
@@ -78,15 +80,19 @@ class ROIManager:
         Returns:
             Cropped numpy array.
         """
-        r = self._regions[name]
         fh, fw = frame.shape[:2]
-        # Scale region coordinates if frame size differs from 1920x1080
-        sx = fw / 1920
-        sy = fh / 1080
-        x1 = int(r.x * sx)
-        y1 = int(r.y * sy)
-        x2 = int(r.x2 * sx)
-        y2 = int(r.y2 * sy)
+        frame_size = (fw, fh)
+        if frame_size != self._cached_frame_size:
+            self._scaled_cache.clear()
+            self._cached_frame_size = frame_size
+        if name not in self._scaled_cache:
+            r = self._regions[name]
+            sx, sy = fw / 1920, fh / 1080
+            self._scaled_cache[name] = (
+                int(r.x * sx), int(r.y * sy),
+                int(r.x2 * sx), int(r.y2 * sy),
+            )
+        x1, y1, x2, y2 = self._scaled_cache[name]
         return frame[y1:y2, x1:x2].copy()
 
     def crop_all(
