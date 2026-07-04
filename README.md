@@ -117,7 +117,7 @@ lol_agent/
 
 ## YOLO 模型
 
-- **模型**: YOLOv8m, 32 classes, 1024px input
+- **模型**: YOLOv12m, 32 classes, 1024px input
 - **推理速度**: ~12ms/帧（~83 FPS）
 - **训练数据**: 719 张游戏截图
 - **权重**: `runs/detect/runs/train/lol_yolo/weights/best.pt`

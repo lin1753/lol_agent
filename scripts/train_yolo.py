@@ -14,7 +14,7 @@ from ultralytics import YOLO
 
 def train(
     data_yaml: str | Path,
-    model_size: str = "yolov8m",
+    model_size: str = "yolo12m",
     epochs: int = 100,
     imgsz: int = 960,
     batch: int = 8,
@@ -68,9 +68,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default="yolov8m",
-        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"],
-        help="YOLO model variant",
+        default="yolo12m",
+        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x",
+                 "yolo12n", "yolo12s", "yolo12m", "yolo12l", "yolo12x"],
+        help="YOLO model variant (v8 or v12)",
     )
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--imgsz", type=int, default=960)
