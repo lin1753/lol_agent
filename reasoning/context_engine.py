@@ -12,7 +12,6 @@ Based on LOL macro strategy principles:
 
 from __future__ import annotations
 
-from memory.temporal_memory import TemporalMemory
 from schemas.feature_bundle import FeatureBundle
 from schemas.state import GameStateV2
 
@@ -36,14 +35,13 @@ class ContextEngine:
 
     Usage:
         engine = ContextEngine()
-        context = engine.compute(features, state, memory)
+        context = engine.compute(features, state)
     """
 
     def compute(
         self,
         features: FeatureBundle,
         state: GameStateV2,
-        memory: TemporalMemory,
     ) -> str:
         """Compute context from features, state, and memory.
 

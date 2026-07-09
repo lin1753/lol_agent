@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from perception.minimap_parser import MinimapDetection
+from utils.map import classify_lane
 
 
 @dataclass
@@ -56,7 +57,7 @@ class HeroMemoryV2:
             record.last_seen_time = current_time
             record.last_x = float(det.x)
             record.last_y = float(det.y)
-            record.last_lane = self._classify_lane(det.y, 240)  # default minimap height
+            record.last_lane = classify_lane(det.x / 240, det.y / 240)  # default minimap 240x240
             record.missing_duration = 0.0
             record.trajectory.append((current_time, float(det.x), float(det.y)))
             if len(record.trajectory) > 100:
@@ -138,15 +139,3 @@ class HeroMemoryV2:
 
         self._heroes[key] = HeroRecord(name=key, team=det.team)
         return key
-
-    @staticmethod
-    def _classify_lane(y: int, minimap_height: int) -> str:
-        """Classify Y position into lane."""
-        if minimap_height <= 0:
-            return "unknown"
-        y_norm = y / minimap_height
-        if y_norm < 0.33:
-            return "top"
-        elif y_norm > 0.66:
-            return "bot"
-        return "mid"

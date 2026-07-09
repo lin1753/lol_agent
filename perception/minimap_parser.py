@@ -83,22 +83,23 @@ class MinimapParser:
                     MinimapDetection(x=cx, y=cy, team=team, radius=r, color_tag=color)
                 )
 
-        # Strategy 2: Hough circle detection for remaining icons
-        gray = cv2.cvtColor(minimap_roi, cv2.COLOR_BGR2GRAY)
-        remaining_circles = self._find_circles_hough(gray, minimap_roi)
-        already_detected = set()
-        for d in detections:
-            already_detected.add((d.x // 15, d.y // 15))
+        # Strategy 2: Hough circle detection — only if Strategy 1 found < 3
+        if len(detections) < 3:
+            gray = cv2.cvtColor(minimap_roi, cv2.COLOR_BGR2GRAY)
+            remaining_circles = self._find_circles_hough(gray, minimap_roi)
+            already_detected = set()
+            for d in detections:
+                already_detected.add((d.x // 15, d.y // 15))
 
-        for cx, cy, r in remaining_circles:
-            grid_key = (cx // 15, cy // 15)
-            if grid_key not in already_detected:
-                team = self._classify_team(hsv, cx, cy)
-                if team:
-                    detections.append(
-                        MinimapDetection(x=cx, y=cy, team=team, radius=r, color_tag=f"bright_{team}")
-                    )
-                    already_detected.add(grid_key)
+            for cx, cy, r in remaining_circles:
+                grid_key = (cx // 15, cy // 15)
+                if grid_key not in already_detected:
+                    team = self._classify_team(hsv, cx, cy)
+                    if team:
+                        detections.append(
+                            MinimapDetection(x=cx, y=cy, team=team, radius=r, color_tag=f"bright_{team}")
+                        )
+                        already_detected.add(grid_key)
 
         # Dedup: merge overlapping detections
         detections = self._nms(detections, threshold=20)

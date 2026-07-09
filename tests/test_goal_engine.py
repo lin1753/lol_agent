@@ -2,7 +2,7 @@
 
 import pytest
 
-from memory.temporal_memory import TemporalMemory
+
 from reasoning.goal_engine import GoalEngine
 from schemas.feature_bundle import FeatureBundle
 from schemas.hero import HeroFeature
@@ -22,8 +22,8 @@ class TestGoalEngine:
         """No strong conditions → farm."""
         features = FeatureBundle()
         state = GameStateV2()
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "farm"
         assert 0 < goal.confidence <= 1.0
 
@@ -31,8 +31,8 @@ class TestGoalEngine:
         """Early game default → farm with decent confidence."""
         features = FeatureBundle()
         state = GameStateV2(phase="early")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "farm"
         assert goal.confidence >= 0.4
 
@@ -46,8 +46,8 @@ class TestGoalEngine:
             dragon_spawn_in=30, combat="advantage",
             phase="mid",
         )
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "contest_dragon"
         assert goal.confidence > 0.5
 
@@ -61,8 +61,8 @@ class TestGoalEngine:
             baron_spawn_in=60, combat="advantage",
             phase="late",
         )
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "contest_baron"
         assert goal.confidence > 0.5
 
@@ -73,16 +73,16 @@ class TestGoalEngine:
             hero=HeroFeature(ally_count=2, enemy_count=2),
         )
         state = GameStateV2(herald_spawn_in=30, phase="mid")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "contest_herald"
 
     def test_retreat_high_threat(self, engine):
         """High threat → retreat."""
         features = FeatureBundle()
         state = GameStateV2(threat="high")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "retreat"
         assert goal.confidence >= 0.7
 
@@ -90,8 +90,8 @@ class TestGoalEngine:
         """Combat disadvantage → retreat."""
         features = FeatureBundle()
         state = GameStateV2(combat="disadvantage")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "retreat"
 
     def test_group_advantage(self, engine):
@@ -100,8 +100,8 @@ class TestGoalEngine:
             hero=HeroFeature(ally_count=4, enemy_count=2),
         )
         state = GameStateV2(combat="advantage")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "group"
         assert goal.confidence > 0.5
 
@@ -112,8 +112,8 @@ class TestGoalEngine:
             skill=__import__('schemas.skill', fromlist=['SkillFeature']).SkillFeature(r_ready=True),
         )
         state = GameStateV2(combat="even", phase="mid")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         # group should be in candidates with decent score
         assert goal.goal_type in ("group", "farm")
 
@@ -124,8 +124,8 @@ class TestGoalEngine:
             map=MapFeature(enemy_missing=3),
         )
         state = GameStateV2(phase="mid")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "push_tower"
 
     def test_defend_tower(self, engine):
@@ -135,8 +135,8 @@ class TestGoalEngine:
             hero=HeroFeature(enemy_count=3, ally_count=1),
         )
         state = GameStateV2()
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type == "defend_tower"
 
     def test_split_push(self, engine):
@@ -146,8 +146,8 @@ class TestGoalEngine:
             map=MapFeature(enemy_missing=3),
         )
         state = GameStateV2(phase="late")
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type in ("split_push", "group", "push_tower")
 
     def test_confidence_range(self, engine):
@@ -157,8 +157,8 @@ class TestGoalEngine:
             for combat in ("advantage", "even", "disadvantage"):
                 for threat in ("low", "medium", "high"):
                     state = GameStateV2(phase=phase, combat=combat, threat=threat)
-                    mem = TemporalMemory()
-                    goal = engine.determine(state, features, mem)
+            
+                    goal = engine.determine(state, features)
                     assert 0 <= goal.confidence <= 1.0
                     assert goal.goal_type in GOAL_TYPES
 
@@ -168,6 +168,6 @@ class TestGoalEngine:
             objective=ObjectiveFeature(),
         )
         state = GameStateV2(dragon_spawn_in=30, baron_spawn_in=60)
-        mem = TemporalMemory()
-        goal = engine.determine(state, features, mem)
+
+        goal = engine.determine(state, features)
         assert goal.goal_type not in ("contest_dragon", "contest_baron", "contest_herald")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -14,25 +16,25 @@ class GameStateV2(BaseModel):
 
     game_time: float = Field(default=0.0, ge=0.0, description="Game time in seconds")
 
-    phase: str = Field(
+    phase: Literal["early", "mid", "late"] = Field(
         default="early",
         description="Game phase: early / mid / late",
     )
-    activity: str = Field(
+    activity: Literal["laning", "roaming", "skirmish", "teamfight", "objective", "reset"] = Field(
         default="laning",
-        description="Current activity: laning / roaming / skirmish / teamfight / objective / reset",
+        description="Current activity",
     )
-    context: str = Field(
+    context: Literal["safe_farm", "pressure", "siege", "defense", "contest", "collapse", "retreat"] = Field(
         default="safe_farm",
-        description="Situation context: safe_farm / pressure / siege / defense / contest / collapse / retreat",
+        description="Situation context",
     )
-    combat: str = Field(
+    combat: Literal["advantage", "even", "disadvantage"] = Field(
         default="even",
-        description="Combat advantage: advantage / even / disadvantage",
+        description="Combat advantage",
     )
-    threat: str = Field(
+    threat: Literal["low", "medium", "high"] = Field(
         default="low",
-        description="Threat level: low / medium / high",
+        description="Threat level",
     )
 
     # Objective timers

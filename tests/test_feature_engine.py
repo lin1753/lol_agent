@@ -5,7 +5,8 @@ import pytest
 from perception.detection_summary import DetectionSummary, SkillState
 from perception.minimap_parser import MinimapDetection
 from perception.yolo_infer import Detection
-from reasoning.feature_engine import FeatureEngine, _parse_kda, _parse_int
+from reasoning.feature_engine import FeatureEngine
+from utils.parsing import parse_kda as _parse_kda, parse_int as _parse_int
 
 
 class TestFeatureEngine:

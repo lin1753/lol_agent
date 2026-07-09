@@ -2,7 +2,7 @@
 
 import pytest
 
-from memory.temporal_memory import TemporalMemory
+
 from reasoning.context_engine import ContextEngine, CONTEXT_TYPES
 from schemas.economy import EconomyFeature
 from schemas.feature_bundle import FeatureBundle
@@ -22,15 +22,15 @@ class TestContextEngine:
         """Low activity → safe_farm."""
         features = FeatureBundle()
         state = GameStateV2()
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "safe_farm"
+
+        assert engine.compute(features, state) == "safe_farm"
 
     def test_retreat_high_threat_disadvantage(self, engine):
         """High threat + combat disadvantage → retreat."""
         features = FeatureBundle()
         state = GameStateV2(threat="high", combat="disadvantage")
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "retreat"
+
+        assert engine.compute(features, state) == "retreat"
 
     def test_retreat_takes_priority(self, engine):
         """Retreat overrides other conditions when threat=high + disadvantage."""
@@ -39,8 +39,8 @@ class TestContextEngine:
             hero=HeroFeature(ally_count=4, enemy_count=1),
         )
         state = GameStateV2(threat="high", combat="disadvantage")
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "retreat"
+
+        assert engine.compute(features, state) == "retreat"
 
     def test_collapse_enemy_pushing(self, engine):
         """2+ enemies + minions pushing + few allies → collapse."""
@@ -49,8 +49,8 @@ class TestContextEngine:
             hero=HeroFeature(enemy_count=2, ally_count=1),
         )
         state = GameStateV2()
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "collapse"
+
+        assert engine.compute(features, state) == "collapse"
 
     def test_contest_dragon_soon(self, engine):
         """Dragon spawning soon + both sides present → contest."""
@@ -58,8 +58,8 @@ class TestContextEngine:
             hero=HeroFeature(ally_count=3, enemy_count=2),
         )
         state = GameStateV2(dragon_spawn_in=30)
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "contest"
+
+        assert engine.compute(features, state) == "contest"
 
     def test_contest_baron_soon(self, engine):
         """Baron spawning soon + both sides → contest."""
@@ -67,8 +67,8 @@ class TestContextEngine:
             hero=HeroFeature(ally_count=2, enemy_count=3),
         )
         state = GameStateV2(baron_spawn_in=60)
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "contest"
+
+        assert engine.compute(features, state) == "contest"
 
     def test_siege_ally_pushing(self, engine):
         """Many ally minions + ally advantage + few enemies → siege."""
@@ -77,8 +77,8 @@ class TestContextEngine:
             hero=HeroFeature(ally_count=4, enemy_count=1),
         )
         state = GameStateV2()
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "siege"
+
+        assert engine.compute(features, state) == "siege"
 
     def test_defense_enemy_pushing(self, engine):
         """Enemy minions + enemies present + equal allies → defense."""
@@ -87,8 +87,8 @@ class TestContextEngine:
             hero=HeroFeature(enemy_count=2, ally_count=2),
         )
         state = GameStateV2()
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "defense"
+
+        assert engine.compute(features, state) == "defense"
 
     def test_pressure_wave_advantage_missing(self, engine):
         """Wave advantage + enemies missing + not high threat → pressure."""
@@ -97,8 +97,8 @@ class TestContextEngine:
             map=MapFeature(enemy_missing=3),
         )
         state = GameStateV2(threat="low")
-        mem = TemporalMemory()
-        assert engine.compute(features, state, mem) == "pressure"
+
+        assert engine.compute(features, state) == "pressure"
 
     def test_all_context_types_exist(self):
         """All 7 context types are defined."""
