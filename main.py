@@ -188,6 +188,7 @@ class LolAgent:
         fps_timer = time.time()
         fps_display = 0.0
         cfg = self._cfg
+        loop_start_time = time.time()  # For live mode elapsed time fallback
 
         print("Press Ctrl+C to stop.\n")
 
@@ -253,6 +254,11 @@ class LolAgent:
                         ocr_values["time"] = f"{int(game_seconds // 60)}:{int(game_seconds % 60):02d}"
                         self._cached_ocr["time"] = ocr_values["time"]
                         frame_index += 1
+                else:
+                    # Live mode: elapsed time as fallback (inaccurate but shows something)
+                    if "time" not in self._cached_ocr:
+                        elapsed = time.time() - loop_start_time
+                        ocr_values["time"] = f"{int(elapsed // 60)}:{int(elapsed % 60):02d}"
 
                 # 5. FeatureEngine (runs in parallel with OCR)
                 bundle = self._feature_engine.extract(
@@ -269,6 +275,8 @@ class LolAgent:
                     except Exception:
                         pass
 
+                game_time = parse_time(ocr_values.get("time", ""))
+
                 # Track KDA changes → death detection
                 curr_kda = parse_kda(ocr_values.get("kda", ""))
                 if curr_kda[2] > self._prev_kda[2]:  # deaths increased
@@ -278,8 +286,6 @@ class LolAgent:
 
                 if self._debug and frame_count % cfg.status_interval == 0:
                     self._print_debug(ocr_values, det_summary, hero_dets, minimap_dets, bundle)
-
-                game_time = parse_time(ocr_values.get("time", ""))
 
                 # Update ObjectiveMemory
                 self._update_objectives(bundle, game_time)

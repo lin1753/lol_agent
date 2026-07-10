@@ -179,9 +179,9 @@ lol_agent/
 | 小地图 | 2 | minimap, minimap_fov |
 | 其他 | 3 | ally_hero_icon, enemy_hero_icon, equipment |
 
-- **模型**: YOLOv8m, 32 classes, 1024px input
-- **训练数据**: 719 张游戏截图（575/124 train/val split）
-- **mAP50**: ~87%
+- **模型**: YOLOv12m, 32 classes, 1024px input
+- **推理速度**: ~12ms/帧（~83 FPS）
+- **训练数据**: 719 张游戏截图
 - **权重**: `runs/detect/runs/train/lol_yolo/weights/best.pt`
 
 ### 并行管线
