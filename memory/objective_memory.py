@@ -67,6 +67,9 @@ class ObjectiveMemory:
             rec.alive = False
             rec.last_killed_time = game_time
             rec.kill_count += 1
+            # Auto-detect Dragon Soul (4 dragons killed)
+            if objective == "dragon" and rec.kill_count >= 4 and not self._dragon_soul_claimed:
+                self.set_dragon_soul_claimed()
 
     def record_spawn(self, objective: str) -> None:
         """Record that an objective has spawned (detected alive)."""

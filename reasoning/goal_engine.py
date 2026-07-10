@@ -15,7 +15,6 @@ Key LOL strategy principles:
 
 from __future__ import annotations
 
-from memory.temporal_memory import TemporalMemory
 from schemas.feature_bundle import FeatureBundle
 from schemas.goal import Goal
 from schemas.state import GameStateV2
@@ -29,14 +28,13 @@ class GoalEngine:
 
     Usage:
         engine = GoalEngine()
-        goal = engine.determine(state, features, memory)
+        goal = engine.determine(state, features)
     """
 
     def determine(
         self,
         state: GameStateV2,
         features: FeatureBundle,
-        memory: TemporalMemory,
     ) -> Goal:
         """Determine the best strategic goal."""
         candidates = []

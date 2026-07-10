@@ -2,7 +2,7 @@
 
 import pytest
 
-from memory.temporal_memory import TemporalMemory
+
 from reasoning.decision_engine_v2 import DecisionEngineV2
 from schemas.feature_bundle import FeatureBundle
 from schemas.goal import Goal
@@ -23,8 +23,8 @@ class TestDecisionEngineV2:
         state = GameStateV2()
         goal = Goal(goal_type="farm", confidence=0.3)
         features = FeatureBundle()
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         assert len(decisions) >= 1
         for i in range(len(decisions) - 1):
             assert decisions[i].score >= decisions[i + 1].score
@@ -37,8 +37,8 @@ class TestDecisionEngineV2:
             objective=ObjectiveFeature(dragon_alive=True),
             hero=HeroFeature(ally_count=3, enemy_count=2),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "contest_dragon" in actions
         cd = next(d for d in decisions if d.action == "contest_dragon")
@@ -53,8 +53,8 @@ class TestDecisionEngineV2:
             hero=HeroFeature(ally_count=3, enemy_count=2),
             wave=WaveFeature(ally_minions=5, enemy_minions=2),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = {d.action for d in decisions}
         # Should have at least contest_dragon + prepare_vision or push_lane_pressure
         assert len(actions) >= 2
@@ -67,8 +67,8 @@ class TestDecisionEngineV2:
             objective=ObjectiveFeature(baron_alive=True),
             hero=HeroFeature(ally_count=4, enemy_count=3),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "contest_baron" in actions
 
@@ -79,8 +79,8 @@ class TestDecisionEngineV2:
         features = FeatureBundle(
             hero=HeroFeature(ally_count=1, enemy_count=3),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "retreat" in actions
         rd = next(d for d in decisions if d.action == "retreat")
@@ -94,8 +94,8 @@ class TestDecisionEngineV2:
             wave=WaveFeature(ally_minions=8, enemy_minions=2),
             map=MapFeature(enemy_missing=3),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "push_tower" in actions
 
@@ -106,8 +106,8 @@ class TestDecisionEngineV2:
         features = FeatureBundle(
             hero=HeroFeature(ally_count=4, enemy_count=2),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "group" in actions
 
@@ -119,8 +119,8 @@ class TestDecisionEngineV2:
             wave=WaveFeature(enemy_minions=6),
             hero=HeroFeature(enemy_count=3),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "defend_tower" in actions
 
@@ -132,8 +132,8 @@ class TestDecisionEngineV2:
             hero=HeroFeature(ally_count=3, enemy_count=1),
             map=MapFeature(enemy_missing=3),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "split_push" in actions
 
@@ -142,8 +142,8 @@ class TestDecisionEngineV2:
         state = GameStateV2()
         goal = Goal(goal_type="farm", confidence=0.5)
         features = FeatureBundle()
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "farm" in actions
 
@@ -154,8 +154,8 @@ class TestDecisionEngineV2:
         features = FeatureBundle(
             map=MapFeature(enemy_missing=4),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "play_safe" in actions
 
@@ -166,8 +166,8 @@ class TestDecisionEngineV2:
         features = FeatureBundle(
             objective=ObjectiveFeature(dragon_alive=True),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "prepare_objective" in actions
 
@@ -179,8 +179,8 @@ class TestDecisionEngineV2:
             objective=ObjectiveFeature(dragon_alive=True),
             hero=HeroFeature(ally_count=3, enemy_count=2),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         for d in decisions:
             assert d.reason != ""
             assert 0 <= d.score <= 100.0
@@ -190,8 +190,8 @@ class TestDecisionEngineV2:
         state = GameStateV2(dragon_spawn_in=20)
         goal = Goal(goal_type="contest_dragon")
         features = FeatureBundle(objective=ObjectiveFeature(dragon_alive=False))
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         actions = [d.action for d in decisions]
         assert "contest_dragon" not in actions
 
@@ -202,7 +202,7 @@ class TestDecisionEngineV2:
         features = FeatureBundle(
             hero=HeroFeature(ally_count=1, enemy_count=3, ally_hp_total=100, enemy_hp_total=500),
         )
-        mem = TemporalMemory()
-        decisions = engine.evaluate(state, goal, features, mem)
+
+        decisions = engine.evaluate(state, goal, features)
         retreat_count = sum(1 for d in decisions if d.action == "retreat")
         assert retreat_count == 1

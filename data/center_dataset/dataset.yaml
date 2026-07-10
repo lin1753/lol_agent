@@ -1,0 +1,10 @@
+names:
+  0: green_hp_hero
+  1: blue_hp_hero
+  2: red_hp_hero
+  3: red_minion
+  4: blue_minion
+nc: 5
+path: D:\Project\lol_agent\data\center_dataset
+train: images/train
+val: images/val

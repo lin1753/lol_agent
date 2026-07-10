@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -18,13 +20,17 @@ GOAL_TYPES = [
     "farm",
 ]
 
+GoalType = Literal["contest_dragon", "contest_baron", "contest_herald",
+                    "push_tower", "defend_tower", "split_push",
+                    "group", "retreat", "farm"]
+
 
 class Goal(BaseModel):
     """The current strategic goal determined by GoalEngine."""
 
-    goal_type: str = Field(
+    goal_type: GoalType = Field(
         default="farm",
-        description="Strategic goal type (one of GOAL_TYPES)",
+        description="Strategic goal type",
     )
     confidence: float = Field(
         default=0.0,

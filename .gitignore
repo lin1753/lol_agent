@@ -10,14 +10,13 @@ build/
 .idea/
 .vscode/
 
-# Data (too large for git)
-data/center_29_dataset/images/
-data/center_29_dataset/labels/
-data/center_29_dataset/dataset.yaml
-data/center_dataset/
-data/yolo_dataset/
+# Data
+data/*/images/
+data/*/labels/
 data/debug_*
 runs/
+
+# Model weights (large binary files)
 *.pt
 
 # OMC/Claude session state
@@ -26,5 +25,3 @@ runs/
 # Temp files
 *.log
 *.tmp
-runs/
-*.pt

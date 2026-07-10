@@ -333,7 +333,7 @@ class TestDecision:
     def test_defaults(self):
         from schemas.decision import Decision
         d = Decision()
-        assert d.action == ""
+        assert d.action == "farm"
         assert d.score == 0.0
         assert d.reason == ""
 
@@ -346,7 +346,7 @@ class TestDecision:
 
     def test_json_roundtrip(self):
         from schemas.decision import Decision
-        d = Decision(action="push_mid", score=65.0, reason="兵线推进")
+        d = Decision(action="push_lane_pressure", score=65.0, reason="兵线推进")
         data = d.model_dump()
         d2 = Decision.model_validate(data)
         assert d2 == d
@@ -363,11 +363,11 @@ class TestDecision:
         decisions = [
             Decision(action="recall", score=20.0),
             Decision(action="contest_dragon", score=95.0),
-            Decision(action="push_mid", score=65.0),
+            Decision(action="push_lane_pressure", score=65.0),
         ]
         sorted_d = sorted(decisions, key=lambda d: d.score, reverse=True)
         assert sorted_d[0].action == "contest_dragon"
-        assert sorted_d[1].action == "push_mid"
+        assert sorted_d[1].action == "push_lane_pressure"
         assert sorted_d[2].action == "recall"
 
 

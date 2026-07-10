@@ -132,11 +132,18 @@ class TestScreenCapture:
     def test_context_manager(self):
         """ScreenCapture should work as a context manager without errors."""
         from capture.screen_capture import ScreenCapture
+        from unittest.mock import MagicMock, patch
 
-        # This will capture the full primary monitor
-        with ScreenCapture(monitor=1) as sc:
-            frame = sc.get_frame()
-            assert frame.ndim == 3
-            assert frame.shape[2] == 3  # BGR
-            assert sc.width > 0
-            assert sc.height > 0
+        mock_mss_instance = MagicMock()
+        mock_mss_instance.monitors = [None, {"top": 0, "left": 0, "width": 1920, "height": 1080}]
+        mock_mss_instance.grab.return_value = np.zeros((1080, 1920, 4), dtype=np.uint8)
+
+        with patch("mss.MSS", return_value=mock_mss_instance):
+            # This will capture using mocked mss
+            with ScreenCapture(monitor=1) as sc:
+                frame = sc.get_frame()
+                assert frame.ndim == 3
+                assert frame.shape[2] == 3  # BGR
+                assert sc.width > 0
+                assert sc.height > 0
+

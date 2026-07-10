@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -38,7 +39,7 @@ class OcrResult:
 
 # Worker script that runs in a clean subprocess (no torch loaded)
 _WORKER_SCRIPT = r'''
-import json, sys, os, tempfile
+import json, sys, os, base64
 os.environ["FLAGS_use_cuda_managed_memory"] = "false"
 
 # Add nvidia DLL paths
@@ -75,24 +76,34 @@ def main():
         if line == "EXIT":
             break
 
-        # "OCR <image_path>"
-        if line.startswith("OCR "):
-            img_path = line[4:]
-            img = cv2.imread(img_path)
-            if img is None:
-                print(json.dumps([]), flush=True)
-                continue
-            results = ocr.ocr(img, cls=False)
-            output = []
-            if results and results[0]:
-                for item in results[0]:
-                    bbox = [[int(p[0]), int(p[1])] for p in item[0]]
-                    output.append({
-                        "text": item[1][0],
-                        "confidence": float(item[1][1]),
-                        "bbox": bbox,
-                    })
-            print(json.dumps(output, ensure_ascii=False), flush=True)
+        # "OCR_B64 <base64_data>" — preferred (no disk I/O)
+        if line.startswith("OCR_B64 "):
+            try:
+                img_bytes = base64.b64decode(line[8:])
+                img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            except Exception:
+                img = None
+        # "OCR <image_path>" — legacy fallback
+        elif line.startswith("OCR "):
+            img = cv2.imread(line[4:])
+        else:
+            continue
+
+        if img is None:
+            print(json.dumps([]), flush=True)
+            continue
+        results = ocr.ocr(img, cls=False)
+        output = []
+        if results and results[0]:
+            for item in results[0]:
+                bbox = [[int(p[0]), int(p[1])] for p in item[0]]
+                output.append({
+                    "text": item[1][0],
+                    "confidence": float(item[1][1]),
+                    "bbox": bbox,
+                })
+        print(json.dumps(output, ensure_ascii=False), flush=True)
 
 if __name__ == "__main__":
     main()
@@ -112,6 +123,11 @@ class OcrEngine:
         self._use_gpu = use_gpu
         self._process: Optional[subprocess.Popen] = None
         self._ready = False
+
+    @property
+    def is_ready(self) -> bool:
+        """Whether the OCR subprocess is ready for inference."""
+        return self._ready
 
     def start(self) -> bool:
         """Start the OCR subprocess. Returns True if ready."""
@@ -168,17 +184,22 @@ class OcrEngine:
             if not self.start():
                 return []
         if self._process.poll() is not None:
-            # Process died, restart
             self._ready = False
             self.start()
 
-        import threading
-        # Unique temp file per call to avoid conflicts
-        tmp_path = Path(tempfile.gettempdir()) / f"lol_ocr_{id(image) & 0xFFFF:04x}.png"
-        cv2.imwrite(str(tmp_path), image)
+        if image is None or image.size == 0:
+            return []
+        if not image.flags["C_CONTIGUOUS"]:
+            image = np.ascontiguousarray(image)
 
+        # Encode to PNG in memory and send as base64 via stdin
         try:
-            self._process.stdin.write(f"OCR {tmp_path}\n")
+            ok, buf = cv2.imencode(".png", image)
+            if not ok:
+                return []
+            import base64
+            b64 = base64.b64encode(buf.tobytes()).decode("ascii")
+            self._process.stdin.write(f"OCR_B64 {b64}\n")
             self._process.stdin.flush()
             line = self._process.stdout.readline()
             if not line:
@@ -188,11 +209,6 @@ class OcrEngine:
         except (json.JSONDecodeError, BrokenPipeError, Exception) as e:
             print(f"OCR error: {e}")
             return []
-        finally:
-            try:
-                tmp_path.unlink(missing_ok=True)
-            except Exception:
-                pass
 
     def recognize_number(self, image: NDArray[np.uint8]) -> Optional[float]:
         for r in self.recognize(image):

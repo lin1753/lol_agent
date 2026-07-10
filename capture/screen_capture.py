@@ -53,10 +53,37 @@ class ScreenCapture:
 
         Returns True if the LOL window was found.
         """
+        return self.find_window("League of Legends")
+
+    def find_window(self, title: str) -> bool:
+        """Find a window by title (partial match) and set capture region.
+
+        Uses EnumWindows for fuzzy matching — LOL client titles may include
+        version numbers or other suffixes.
+
+        Returns True if the window was found.
+        """
         try:
-            hwnd = ctypes.windll.user32.FindWindowW(None, "League of Legends")
-            if hwnd == 0:
+            result: list[int] = []
+            title_lower = title.lower()
+
+            @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+            def _enum_callback(hwnd, _lparam):
+                if ctypes.windll.user32.IsWindowVisible(hwnd):
+                    length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+                    if length > 0:
+                        buf = ctypes.create_unicode_buffer(length + 1)
+                        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
+                        if title_lower in buf.value.lower():
+                            result.append(hwnd)
+                            return False  # stop enumeration
+                return True
+
+            ctypes.windll.user32.EnumWindows(_enum_callback, 0)
+            if not result:
                 return False
+
+            hwnd = result[0]
             rect = ctypes.wintypes.RECT()
             ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
             self._monitor = {
